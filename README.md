@@ -1,3 +1,11 @@
+# Paseo OHOS
+
+> **Unofficial downstream fork** of [getpaseo/paseo](https://github.com/getpaseo/paseo) adding a HarmonyOS/OpenHarmony client (`ohos/`).
+> This project is **not affiliated with, endorsed by, or sponsored by** the upstream Paseo project or Huawei Technologies Co., Ltd.
+> Upstream base commit: `d636abd7a4ce302e7ccb9eb6074f637c6dd4d83b`.
+
+---
+
 <p align="center">
   <img src="packages/website/public/logo.svg" width="64" height="64" alt="Paseo logo">
 </p>
