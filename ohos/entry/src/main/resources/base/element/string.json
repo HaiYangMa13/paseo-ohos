@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Paseo HarmonyOS NEXT Native Client"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Paseo AI Agent Control Platform"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Paseo"
+    },
+    {
+      "name": "reason_internet",
+      "value": "Connect to Paseo daemon and relay servers"
+    },
+    {
+      "name": "reason_network_info",
+      "value": "Monitor network connectivity status"
+    },
+    {
+      "name": "reason_vibrate",
+      "value": "Provide tactile feedback on approval requests"
+    },
+    {
+      "name": "reason_background",
+      "value": "Keep WebSocket connection and Live View updated in background"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+﻿# HarmonyOS/DevEco generated directories
+.idea/
+.hvigor/
+oh_modules/
+build/
+*.hap
+*.log
+
+# Local signing material
+*.cer
+*.p12
+*.p7b
+*.p7b

@@ -1,0 +1,12 @@
+Paseo OHOS downstream notice
+
+This repository is a downstream distribution of Paseo, originally developed by Mohamed Boudra and contributors:
+https://github.com/getpaseo/paseo
+
+The upstream Paseo source is licensed under the Apache License, Version 2.0.
+See LICENSE for the complete license text. Third-party components remain under
+ their respective licenses.
+
+The HarmonyOS/OpenHarmony client and its modifications are community-maintained
+and are not affiliated with, endorsed by, or sponsored by the upstream Paseo
+project or Huawei Technologies Co., Ltd.
