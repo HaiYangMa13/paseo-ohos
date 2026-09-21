@@ -25,21 +25,21 @@ export default class EntryAbility extends UIAbility {
     const win = this.mainWindow;
     if (!win) return;
     try {
-      win.setWindowLayoutFullScreen(false).catch((error: Object) => {
+      win.setWindowLayoutFullScreen(true).catch((error: Object) => {
         hilog.warn(0x0000, 'PaseoAbility', 'setWindowLayoutFullScreen failed: %{public}s', JSON.stringify(error));
       });
       win.setWindowSystemBarEnable(['status', 'navigation']).catch((error: Object) => {
         hilog.warn(0x0000, 'PaseoAbility', 'setWindowSystemBarEnable failed: %{public}s', JSON.stringify(error));
       });
       win.setWindowSystemBarProperties({
-        statusBarColor: '#F7F7F7',
-        navigationBarColor: '#FFFFFF',
+        statusBarColor: '#00000000',
+        navigationBarColor: '#00000000',
         isStatusBarLightIcon: false,
         isNavigationBarLightIcon: false
       });
-      win.setImmersiveModeEnabledState(false);
+      win.setImmersiveModeEnabledState(true);
     } catch (error) {
-      hilog.warn(0x0000, 'PaseoAbility', 'stable window setup failed: %{public}s', JSON.stringify(error));
+      hilog.warn(0x0000, 'PaseoAbility', 'immersive window setup failed: %{public}s', JSON.stringify(error));
     }
   }
 

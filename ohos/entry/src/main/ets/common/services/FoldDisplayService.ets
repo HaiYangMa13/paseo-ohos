@@ -20,6 +20,7 @@ export interface HarmonyDisplayMetrics {
   widthVp: number;
   heightVp: number;
   isLandscape: boolean;
+  keyboardHeightVp: number;
   safeAreaInsets: HarmonySafeAreaInsets;
 }
 
@@ -41,6 +42,7 @@ class DefaultDisplayMetrics implements HarmonyDisplayMetrics {
   widthVp: number = 0;
   heightVp: number = 0;
   isLandscape: boolean = false;
+  keyboardHeightVp: number = 0;
   safeAreaInsets: HarmonySafeAreaInsets = new DefaultSafeAreaInsets();
 }
 
@@ -168,10 +170,10 @@ export class FoldDisplayService {
       const heightVp = Math.round(heightPx / densityPixels);
 
       const topPx = Math.max(systemAvoidArea?.topRect?.height ?? 0, 0);
+      const keyboardPx = Math.max(keyboardAvoidArea?.bottomRect?.height ?? 0, 0);
       const bottomPx = Math.max(
         systemAvoidArea?.bottomRect?.height ?? 0,
-        navAvoidArea?.bottomRect?.height ?? 0,
-        keyboardAvoidArea?.bottomRect?.height ?? 0
+        navAvoidArea?.bottomRect?.height ?? 0
       );
       const leftPx = Math.max(systemAvoidArea?.leftRect?.width ?? 0, 0);
       const rightPx = Math.max(systemAvoidArea?.rightRect?.width ?? 0, 0);
@@ -180,6 +182,7 @@ export class FoldDisplayService {
       const bottomVp = Math.round(bottomPx / densityPixels);
       const leftVp = Math.round(leftPx / densityPixels);
       const rightVp = Math.round(rightPx / densityPixels);
+      const keyboardHeightVp = Math.round(keyboardPx / densityPixels);
 
       const isLandscape = widthVp > heightVp;
       const isFoldExpanded = foldStatus === display.FoldStatus.FOLD_STATUS_EXPANDED;
@@ -203,6 +206,7 @@ export class FoldDisplayService {
       nextMetrics.widthVp = widthVp;
       nextMetrics.heightVp = heightVp;
       nextMetrics.isLandscape = isLandscape;
+      nextMetrics.keyboardHeightVp = keyboardHeightVp;
       nextMetrics.safeAreaInsets = safeInsets;
 
       this.currentMetrics = nextMetrics;

@@ -136,10 +136,7 @@ struct Index {
   private bridge: NativeHarmonyBridge = new NativeHarmonyBridge();
   @State isLoading: boolean = true;
   @State progress: number = 0;
-  // Keep ArkWeb's graphic surface tied to the actual ArkUI container area.
-  // Fold/rotate/IME transitions can change this area without recreating the page.
-  @State webWidth: Length = '100%';
-  @State webHeight: Length = '100%';
+  @State keyboardInsetVp: number = 0;
 
   aboutToAppear() {
     // Enable webview debugging for local inspection
@@ -150,6 +147,10 @@ struct Index {
     this.bridge.setUIContext(this.getUIContext());
 
     FoldDisplayService.getInstance().addListener((metrics: HarmonyDisplayMetrics) => {
+      const nextInset = metrics.keyboardHeightVp > 0 ? metrics.keyboardHeightVp : 0;
+      if (this.keyboardInsetVp !== nextInset) {
+        this.keyboardInsetVp = nextInset;
+      }
       this.bridge.dispatchDisplayMetrics();
     });
   }
@@ -177,7 +178,8 @@ struct Index {
         .mixedMode(MixedMode.All)
         .zoomAccess(false)
         .layoutMode(WebLayoutMode.NONE)
-        .backgroundColor('#181B1A')
+        .keyboardAvoidMode(WebKeyboardAvoidMode.OVERLAYS_CONTENT)
+        .backgroundColor('#F7F7F8')
         .javaScriptProxy({
           object: this.bridge,
           name: 'HarmonyBridge',
@@ -199,8 +201,10 @@ struct Index {
             Logger.error('ArkWeb load error: %{public}s', event.error.getErrorInfo());
           }
         })
-        .width(this.webWidth)
-        .height(this.webHeight)
+        .width('100%')
+        .height('100%')
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .translate({ y: -this.keyboardInsetVp })
 
       if (this.isLoading && this.progress < 100) {
         LoadingProgress()
@@ -212,14 +216,8 @@ struct Index {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#181B1A')
-    .onAreaChange((_oldArea: Area, newArea: Area) => {
-      // Area values are in vp. Only update when the real container size changes;
-      // this avoids a state/render loop while still covering fold, rotation and IME.
-      if (newArea.width !== this.webWidth || newArea.height !== this.webHeight) {
-        this.webWidth = newArea.width;
-        this.webHeight = newArea.height;
-      }
-    })
+    .backgroundColor('#F7F7F8')
+    .clip(true)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }

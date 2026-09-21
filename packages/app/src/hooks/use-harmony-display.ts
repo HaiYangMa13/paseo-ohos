@@ -13,6 +13,7 @@ export interface HarmonyDisplayMetrics {
   widthVp: number;
   heightVp: number;
   isLandscape: boolean;
+  keyboardHeightVp: number;
   safeAreaInsets: {
     top: number;
     bottom: number;
@@ -32,6 +33,7 @@ const DEFAULT_METRICS: HarmonyDisplayMetrics = {
   widthVp: 0,
   heightVp: 0,
   isLandscape: false,
+  keyboardHeightVp: 0,
   safeAreaInsets: { top: 0, bottom: 0, left: 0, right: 0 },
 };
 
