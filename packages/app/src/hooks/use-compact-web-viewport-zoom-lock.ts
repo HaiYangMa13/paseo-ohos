@@ -11,6 +11,22 @@ export function useCompactWebViewportZoomLock(isCompactLayout: boolean) {
       return;
     }
 
+    // On HarmonyOS foldables (Pura X Max / Mate X), locking user-scalable=no with a static
+    // scale prevents the WebView engine from stretching/re-layouting when the physical screen
+    // unfolds or rotates, leaving half of the screen as a black/blank canvas.
+    // Instead, allow dynamic re-scaling and full viewport-fit coverage.
+    if (typeof globalThis !== "undefined" && (globalThis as { HarmonyBridge?: unknown }).HarmonyBridge != null) {
+      const viewportMeta =
+        document.querySelector<HTMLMetaElement>('meta[name="viewport"]') ??
+        document.createElement("meta");
+      if (!viewportMeta.parentElement) {
+        viewportMeta.name = "viewport";
+        document.head.appendChild(viewportMeta);
+      }
+      viewportMeta.setAttribute("content", "width=device-width, initial-scale=1, viewport-fit=cover");
+      return;
+    }
+
     const viewportMeta =
       document.querySelector<HTMLMetaElement>('meta[name="viewport"]') ??
       document.createElement("meta");

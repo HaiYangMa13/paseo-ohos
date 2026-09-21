@@ -15,6 +15,7 @@ import type { SplitPane } from "@/stores/workspace-layout-store";
 import type { WorkspaceTab } from "@/workspace-tabs/model";
 import { WindowChromeRegion, WindowChromeSafeArea } from "@/utils/desktop-window";
 import { isHarmony } from "@/constants/platform";
+import { useHarmonyDisplayMetrics } from "@/hooks/use-harmony-display";
 
 interface ExplorerSidebarDockProps {
   pane: SplitPane;
@@ -56,7 +57,13 @@ export function ExplorerSidebarDock({
   headerAction,
 }: ExplorerSidebarDockProps) {
   const { width, height } = useWindowDimensions();
-  const isLandscapeHarmony = isHarmony && width > height;
+  const harmonyMetrics = useHarmonyDisplayMetrics();
+  const isLandscapeHarmony = isHarmony && (width > height || harmonyMetrics.isLandscape);
+  // In landscape or when unfolded on a foldable phone, use the native top safe area inset
+  // (minimum 36 to clear camera/status bar, or exact value from ArkTS)
+  const topInset = isLandscapeHarmony
+    ? Math.max(harmonyMetrics.safeAreaInsets.top, 36)
+    : 0;
   const paneState = useMemo(() => deriveWorkspacePaneState({ pane, tabs: uiTabs }), [pane, uiTabs]);
   const tabs = useMemo(() => paneState.tabs.map((tab) => tab.descriptor), [paneState.tabs]);
   const activeTabId = paneState.activeTabId;
@@ -90,7 +97,7 @@ export function ExplorerSidebarDock({
         <View style={styles.dock} testID="workspace-explorer-sidebar">
           <WindowChromeSafeArea
             placement="inline"
-            style={[styles.tabRail, isLandscapeHarmony && styles.landscapeSystemInset]}
+            style={[styles.tabRail, isLandscapeHarmony && { paddingTop: topInset }]}
           >
             <TitlebarDragRegion />
             <ExplorerSidebarTabRail
@@ -140,11 +147,6 @@ const styles = StyleSheet.create((theme) => ({
     position: "relative",
     flexShrink: 0,
     backgroundColor: theme.colors.surfaceSidebar,
-  },
-  // The Explorer rail owns the “文件” header and its actions. Keep the whole
-  // rail below the transparent HarmonyOS status-bar band in landscape.
-  landscapeSystemInset: {
-    paddingTop: 32,
   },
   tabRailDivider: {
     position: "absolute",

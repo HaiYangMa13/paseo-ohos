@@ -4,6 +4,7 @@ import Want from '@ohos.app.ability.Want';
 import window from '@ohos.window';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { sensor } from '@kit.SensorServiceKit';
+import { FoldDisplayService } from '../common/services/FoldDisplayService';
 
 interface AmbientLightSample {
   intensity: number;
@@ -13,27 +14,32 @@ export default class EntryAbility extends UIAbility {
   private mainWindow: window.Window | null = null;
   private ambientLightCallback: ((data: AmbientLightSample) => void) | null = null;
 
+  /**
+   * Stable window mode for the ArkWeb fallback client.
+   *
+   * Fullscreen transparent system bars make ArkWeb's graphic surface race the
+   * fold/rotation/IME window transaction on Pura X. Keep the system bars in
+   * the normal layout so HarmonyOS owns resize and keyboard avoidance.
+   */
   private applyImmersiveWindow(light: boolean): void {
     const win = this.mainWindow;
     if (!win) return;
     try {
-      win.setWindowLayoutFullScreen(true).catch((error: Object) => {
+      win.setWindowLayoutFullScreen(false).catch((error: Object) => {
         hilog.warn(0x0000, 'PaseoAbility', 'setWindowLayoutFullScreen failed: %{public}s', JSON.stringify(error));
       });
       win.setWindowSystemBarEnable(['status', 'navigation']).catch((error: Object) => {
         hilog.warn(0x0000, 'PaseoAbility', 'setWindowSystemBarEnable failed: %{public}s', JSON.stringify(error));
       });
-      // Transparent system bars let ArkWeb paint the Paseo surface underneath
-      // both bars; icon contrast follows the ambient-light reading.
       win.setWindowSystemBarProperties({
-        statusBarColor: '#00000000',
-        navigationBarColor: '#00000000',
-        isStatusBarLightIcon: light,
-        isNavigationBarLightIcon: light
+        statusBarColor: '#F7F7F7',
+        navigationBarColor: '#FFFFFF',
+        isStatusBarLightIcon: false,
+        isNavigationBarLightIcon: false
       });
-      win.setImmersiveModeEnabledState(true);
+      win.setImmersiveModeEnabledState(false);
     } catch (error) {
-      hilog.warn(0x0000, 'PaseoAbility', 'immersive window setup failed: %{public}s', JSON.stringify(error));
+      hilog.warn(0x0000, 'PaseoAbility', 'stable window setup failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -81,6 +87,7 @@ export default class EntryAbility extends UIAbility {
       }
       windowClass = data;
       this.mainWindow = data;
+      FoldDisplayService.getInstance().init(data);
       this.applyImmersiveWindow(false);
       this.startAmbientLightAdaptation();
     });

@@ -27,6 +27,7 @@ import { EditingTextInput as TextInput } from "@/components/ui/text-input";
 import { StyleSheet, useUnistyles, withUnistyles } from "react-native-unistyles";
 import { useIsCompactFormFactor } from "@/constants/layout";
 import { isHarmony, isWeb } from "@/constants/platform";
+import { useHarmonyDisplayMetrics } from "@/hooks/use-harmony-display";
 import * as Clipboard from "expo-clipboard";
 import { ChevronDown, Eye, EyeOff, FilePlus, FolderPlus, RotateCw } from "lucide-react-native";
 import { MaterialFileIcon } from "@/components/material-file-icon";
@@ -1155,8 +1156,13 @@ interface FileExplorerPaneContentProps {
 function FileExplorerPaneContent(props: FileExplorerPaneContentProps) {
   const { theme } = useUnistyles();
   const { width, height } = useWindowDimensions();
-  const isLandscapeHarmony = isHarmony && width > height;
-  const landscapeSystemInsetStyle = isLandscapeHarmony ? styles.landscapeSystemInset : null;
+  const harmonyMetrics = useHarmonyDisplayMetrics();
+  // In landscape or when unfolded on a foldable phone, use native top safe area inset
+  const isLandscapeHarmony = isHarmony && (width > height || harmonyMetrics.isLandscape);
+  const harmonyTopInset = isLandscapeHarmony
+    ? Math.max(harmonyMetrics.safeAreaInsets.top, 32)
+    : 0;
+  const landscapeSystemInsetStyle = isLandscapeHarmony ? { paddingTop: harmonyTopInset } : null;
   const { t } = useTranslation();
   const {
     error,
@@ -1665,11 +1671,8 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
   },
   // ArkWeb is edge-to-edge on HarmonyOS. The file pane has its own toolbar,
-  // so reserve the landscape status-bar band locally instead of letting the
-  // transparent system bar paint over the title and action buttons.
-  landscapeSystemInset: {
-    paddingTop: 32,
-  },
+  // Transparent system bars let ArkWeb paint behind the status bar; on HarmonyOS foldables
+  // the top inset is dynamically calculated from the native WindowAvoidArea.
   treePaneWithPreview: {
     flex: 0,
     flexGrow: 0,

@@ -1,5 +1,5 @@
 import { useUnistyles } from "react-native-unistyles";
-import { isWeb } from "@/constants/platform";
+import { isWeb, isHarmony } from "@/constants/platform";
 
 export const FOOTER_HEIGHT = 75;
 
@@ -41,6 +41,9 @@ export {
  */
 export function useIsCompactFormFactor(): boolean {
   const { rt } = useUnistyles();
+  // On HarmonyOS foldables (e.g. Pura X Max / Mate X), when the screen is folded or
+  // under compact width (< 720), use the phone single-column layout. When unfolded or
+  // in landscape, breakpoint resolves to md/lg/xl, triggering the multi-column layout.
   return rt.breakpoint === "xs" || rt.breakpoint === "sm";
 }
 

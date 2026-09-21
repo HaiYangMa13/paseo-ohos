@@ -4,11 +4,13 @@ import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { BusinessError } from '@ohos.base';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { LiveViewService } from '../common/services/LiveViewService';
+import { FoldDisplayService, HarmonyDisplayMetrics } from '../common/services/FoldDisplayService';
 import { AgentModel, AgentStatus } from '../common/models/Agent';
 import { Logger } from '../common/utils/Logger';
 
 class NativeHarmonyBridge {
   private liveViewService: LiveViewService = LiveViewService.getInstance();
+  private foldDisplayService: FoldDisplayService = FoldDisplayService.getInstance();
   private webviewController: webview.WebviewController | null = null;
   private context: common.UIAbilityContext | null = null;
   private uiContext: UIContext | null = null;
@@ -45,6 +47,27 @@ class NativeHarmonyBridge {
   public notifyPermission(toolName: string, description: string): void {
     Logger.info('NativeHarmonyBridge notifyPermission: %{public}s', toolName);
     this.liveViewService.notifyPermissionRequired(toolName, description);
+  }
+
+  public getDisplayMetrics(): string {
+    return JSON.stringify(this.foldDisplayService.getMetrics());
+  }
+
+  public dispatchDisplayMetrics(): void {
+    if (!this.webviewController) return;
+    const metricsJson = JSON.stringify(this.foldDisplayService.getMetrics());
+    const script = `window.__onHarmonyDisplayMetricsChange && window.__onHarmonyDisplayMetricsChange(${metricsJson});`;
+    if (this.uiContext) {
+      this.uiContext.runScopedTask(() => {
+        try {
+          this.webviewController?.runJavaScript(script)
+            .then(() => undefined)
+            .catch(() => undefined);
+        } catch (e) {
+          // Ignore
+        }
+      });
+    }
   }
 
   /**
@@ -113,6 +136,10 @@ struct Index {
   private bridge: NativeHarmonyBridge = new NativeHarmonyBridge();
   @State isLoading: boolean = true;
   @State progress: number = 0;
+  // Keep ArkWeb's graphic surface tied to the actual ArkUI container area.
+  // Fold/rotate/IME transitions can change this area without recreating the page.
+  @State webWidth: Length = '100%';
+  @State webHeight: Length = '100%';
 
   aboutToAppear() {
     // Enable webview debugging for local inspection
@@ -121,6 +148,10 @@ struct Index {
     const context = getContext(this) as common.UIAbilityContext;
     this.bridge.setContext(context);
     this.bridge.setUIContext(this.getUIContext());
+
+    FoldDisplayService.getInstance().addListener((metrics: HarmonyDisplayMetrics) => {
+      this.bridge.dispatchDisplayMetrics();
+    });
   }
 
   onBackPress(): boolean {
@@ -133,7 +164,11 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.Top }) {
-      Web({ src: $rawfile('index.html'), controller: this.webviewController })
+      Web({
+        src: $rawfile('index.html'),
+        controller: this.webviewController,
+        renderMode: RenderMode.ASYNC_RENDER
+      })
         .javaScriptAccess(true)
         .domStorageAccess(true)
         .fileAccess(true)
@@ -141,11 +176,12 @@ struct Index {
         .databaseAccess(true)
         .mixedMode(MixedMode.All)
         .zoomAccess(false)
+        .layoutMode(WebLayoutMode.NONE)
         .backgroundColor('#181B1A')
         .javaScriptProxy({
           object: this.bridge,
           name: 'HarmonyBridge',
-          methodList: ['updateAgentStatus', 'notifyPermission', 'scanPairingQr'],
+          methodList: ['updateAgentStatus', 'notifyPermission', 'scanPairingQr', 'getDisplayMetrics'],
           controller: this.webviewController
         })
         .onProgressChange((event) => {
@@ -153,6 +189,8 @@ struct Index {
             this.progress = event.newProgress;
             if (this.progress >= 100) {
               this.isLoading = false;
+              // Dispatch initial metrics when page finishes loading
+              this.bridge.dispatchDisplayMetrics();
             }
           }
         })
@@ -161,8 +199,8 @@ struct Index {
             Logger.error('ArkWeb load error: %{public}s', event.error.getErrorInfo());
           }
         })
-        .width('100%')
-        .height('100%')
+        .width(this.webWidth)
+        .height(this.webHeight)
 
       if (this.isLoading && this.progress < 100) {
         LoadingProgress()
@@ -175,5 +213,13 @@ struct Index {
     .width('100%')
     .height('100%')
     .backgroundColor('#181B1A')
+    .onAreaChange((_oldArea: Area, newArea: Area) => {
+      // Area values are in vp. Only update when the real container size changes;
+      // this avoids a state/render loop while still covering fold, rotation and IME.
+      if (newArea.width !== this.webWidth || newArea.height !== this.webHeight) {
+        this.webWidth = newArea.width;
+        this.webHeight = newArea.height;
+      }
+    })
   }
 }
