@@ -15,6 +15,11 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>%WEB_TITLE%</title>
+    <script id="paseo-ohos-route-bootstrap">
+      if (window.location.protocol === "resource:" && window.location.pathname === "/index.html") {
+        window.history.replaceState(null, "", "/" + window.location.search + window.location.hash);
+      }
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* Keep the app shell fixed to the viewport. */

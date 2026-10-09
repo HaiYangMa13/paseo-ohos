@@ -14,6 +14,22 @@ export function localizeAssetPaths(content) {
     .replace(/(["'`(])\/(?=(?:_expo|assets)\/)/g, "$1./");
 }
 
+/** Only the HTML entry may receive a bootstrap; JS bundles can contain HTML strings. */
+export function localizeOhosEntry(html) {
+  const localized = localizeAssetPaths(html);
+  if (localized.includes('id="paseo-ohos-route-bootstrap"')) return localized;
+  if (!localized.includes("<head>")) throw new Error("Expo entry is missing <head>");
+  return localized.replace(
+    "<head>",
+    `<head>
+    <script id="paseo-ohos-route-bootstrap">
+      if (window.location.protocol === "resource:" && window.location.pathname === "/index.html") {
+        window.history.replaceState(null, "", "/" + window.location.search + window.location.hash);
+      }
+    </script>`,
+  );
+}
+
 async function localizeDirectory(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
@@ -38,6 +54,7 @@ export async function syncOhosWeb() {
   try {
     await cp(SOURCE, staged, { recursive: true });
     await localizeDirectory(staged);
+    await writeFile(path.join(staged, "index.html"), localizeOhosEntry(html));
     const manifestFile = path.join(staged, "manifest.json");
     const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
     manifest.start_url = "./index.html";
