@@ -20,6 +20,9 @@ interface PushClick {
 }
 
 export class PushService {
+  // Push Kit reports these when this phone/app cannot obtain a token at all: rights not
+  // activated, unsupported device, cross-location restriction or app identity mismatch.
+  private static readonly NOT_ACTIVATED_CODES: number[] = [1000900010, 1000900012, 1000900013, 1000900014];
   private static instance: PushService | null = null;
   private token: string = '';
   private state: PushState = { status: 'loading' };
@@ -73,9 +76,19 @@ export class PushService {
       this.token = await pushService.getToken();
       await this.refreshPermission();
     } catch (error) {
-      const code = (error as BusinessError).code;
-      this.publish({ status: 'error', code: typeof code === 'number' ? code : -1 });
+      this.publishFailure(error as BusinessError);
     }
+  }
+
+  private publishFailure(error: BusinessError): void {
+    const code = typeof error.code === 'number' ? error.code : -1;
+    if (PushService.NOT_ACTIVATED_CODES.includes(code)) {
+      Logger.warn('Huawei push is unavailable on this phone: %{public}d', code);
+      this.publish({ status: 'not-activated', code });
+      return;
+    }
+    Logger.warn('Huawei push token request failed: %{public}d', code);
+    this.publish({ status: 'error', code });
   }
 
   public async refreshPermission(): Promise<void> {
@@ -85,8 +98,7 @@ export class PushService {
       if (enabled) this.publish({ status: 'ready', token: this.token });
       else if (this.state.status !== 'denied') this.publish({ status: 'permission-required' });
     } catch (error) {
-      const code = (error as BusinessError).code;
-      this.publish({ status: 'error', code: typeof code === 'number' ? code : -1 });
+      this.publishFailure(error as BusinessError);
     }
   }
 
@@ -106,9 +118,8 @@ export class PushService {
       if (enabled) this.publish({ status: 'ready', token: this.token });
       else this.publish({ status: 'denied' });
     } catch (error) {
-      const code = (error as BusinessError).code;
-      if (code === 1600004) this.publish({ status: 'denied' });
-      else this.publish({ status: 'error', code: typeof code === 'number' ? code : -1 });
+      if ((error as BusinessError).code === 1600004) this.publish({ status: 'denied' });
+      else this.publishFailure(error as BusinessError);
     } finally {
       this.requestInFlight = false;
     }

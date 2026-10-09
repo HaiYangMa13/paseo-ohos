@@ -59,19 +59,54 @@ afterEach(() => {
 });
 
 describe("Harmony push subscription", () => {
-  test("does not send Huawei tokens or prompt for permission with an unsupported host", async () => {
+  test("stays silent with a host that has not enabled Huawei push", async () => {
     const fixture = setup(false);
     const stop = startHarmonySubscription({
       client: fixture.client,
       serverId: "host",
       storage: fixture.storage,
     });
-    await vi.waitFor(() =>
-      expect(useHarmonyPushStore.getState().entries.host.state).toEqual({ status: "unavailable" }),
-    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(useHarmonyPushStore.getState().entries.host).toBeUndefined();
     expect(fixture.registerPushToken).not.toHaveBeenCalled();
     expect(fixture.bridge.requestPushPermission).not.toHaveBeenCalled();
     expect(fixture.cache.size).toBe(0);
+    stop();
+  });
+
+  test("stays silent and forgets a stale entry when the phone cannot obtain a token", async () => {
+    const fixture = setup();
+    fixture.bridge.getPushState = () =>
+      JSON.stringify({ status: "not-activated", code: 1000900012 });
+    const stop = startHarmonySubscription({
+      client: fixture.client,
+      serverId: "host",
+      storage: fixture.storage,
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(useHarmonyPushStore.getState().entries.host).toBeUndefined();
+    expect(fixture.registerPushToken).not.toHaveBeenCalled();
+    expect(fixture.bridge.requestPushPermission).not.toHaveBeenCalled();
+    stop();
+  });
+
+  test("clears a previous reminder once the host stops advertising Huawei push", async () => {
+    const fixture = setup();
+    let capable = true;
+    fixture.client.getLastServerInfoMessage = () => ({
+      features: { huaweiPushNotifications: capable },
+    });
+    const stop = startHarmonySubscription({
+      client: fixture.client,
+      serverId: "host",
+      storage: fixture.storage,
+    });
+    await vi.waitFor(() =>
+      expect(useHarmonyPushStore.getState().entries.host.state).toEqual({ status: "ready" }),
+    );
+    capable = false;
+    fixture.events.dispatchEvent(new Event("paseo:harmony-push-state"));
+    await vi.waitFor(() => expect(useHarmonyPushStore.getState().entries.host).toBeUndefined());
     stop();
   });
 

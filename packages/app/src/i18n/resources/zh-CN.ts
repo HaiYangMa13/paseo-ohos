@@ -9,7 +9,6 @@ export const zhCN: TranslationResources = {
     permissionRequired: "启用通知后，Paseo 在后台时也可收到任务提醒。",
     denied: "通知已关闭，请在系统通知设置中启用 Paseo。",
     error: "无法准备通知（错误码 {{code}}）。请检查主机连接、Push Kit 开通状态与签名 Profile。",
-    unavailable: "此主机尚未启用华为推送，请先升级并配置主机。",
     enable: "启用通知",
     settings: "打开设置",
   },

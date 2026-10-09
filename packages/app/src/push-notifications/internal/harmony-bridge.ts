@@ -7,6 +7,7 @@ export const NativePushStateSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("loading") }),
   z.object({ status: z.literal("permission-required") }),
   z.object({ status: z.literal("denied") }),
+  z.object({ status: z.literal("not-activated"), code: z.number().int() }),
   z.object({ status: z.literal("error"), code: z.number().int() }),
 ]);
 // Huawei notification data reaches the app as raw platform strings, so accept digits here.

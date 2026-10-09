@@ -10,8 +10,6 @@ export const ko: TranslationResources = {
     denied: "알림이 꺼져 있습니다. 시스템 알림 설정에서 Paseo를 활성화하세요.",
     error:
       "알림을 준비할 수 없습니다(코드 {{code}}). 호스트 연결, Push Kit 활성화, 서명 프로필을 확인하세요.",
-    unavailable:
-      "이 호스트에서 Huawei Push가 활성화되지 않았습니다. 먼저 호스트를 업데이트하고 설정하세요.",
     enable: "알림 활성화",
     settings: "설정 열기",
   },

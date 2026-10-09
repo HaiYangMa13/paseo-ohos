@@ -17,7 +17,7 @@ export type HarmonySubscriptionClient = Pick<
 };
 type Storage = Pick<typeof AsyncStorage, "getItem" | "setItem" | "removeItem">;
 export type HarmonyPushState =
-  | { status: "ready" | "loading" | "permission-required" | "denied" | "unavailable" }
+  | { status: "ready" | "loading" | "permission-required" | "denied" }
   | { status: "error"; code: number };
 export interface HarmonyPushEntry {
   state: HarmonyPushState;
@@ -50,17 +50,33 @@ export function startHarmonySubscription(input: {
     });
   }
 
+  /** Hosts and phones that cannot do Huawei push stay silent: there is nothing to act on. */
+  function clearEntry(): void {
+    if (stopped) return;
+    const entries = useHarmonyPushStore.getState().entries;
+    if (!entries[input.serverId]) return;
+    const next = { ...entries };
+    delete next[input.serverId];
+    useHarmonyPushStore.setState({ entries: next });
+  }
+
   async function synchronize(): Promise<void> {
     if (stopped || !input.client.isConnected) return;
     const bridge = getHarmonyPushBridge();
     if (!bridge) return;
     // COMPAT(huaweiPushNotifications): added in v0.11.1-ohos, remove gate after 2027-04-08 once host floor supports Huawei.
     if (input.client.getLastServerInfoMessage()?.features?.huaweiPushNotifications !== true) {
-      publish({ status: "unavailable" });
+      clearEntry();
       return;
     }
     const raw: unknown = JSON.parse(bridge.getPushState());
     const state = NativePushStateSchema.parse(raw);
+    // The phone itself cannot obtain a token (Push Kit rights not activated, unsupported device,
+    // identity mismatch). The shell logs the code; the app does not nag about a host it cannot fix.
+    if (state.status === "not-activated") {
+      clearEntry();
+      return;
+    }
     if (state.status !== "ready") {
       publish(state);
       return;

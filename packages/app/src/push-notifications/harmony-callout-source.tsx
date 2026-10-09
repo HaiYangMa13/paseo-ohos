@@ -13,7 +13,6 @@ const DESCRIPTION_KEYS = {
   ready: "huaweiPush.ready",
   denied: "huaweiPush.denied",
   "permission-required": "huaweiPush.permissionRequired",
-  unavailable: "huaweiPush.unavailable",
 } as const;
 
 function HostPushCallout({ serverId, entry }: { serverId: string; entry: HarmonyPushEntry }) {
@@ -21,35 +20,42 @@ function HostPushCallout({ serverId, entry }: { serverId: string; entry: Harmony
   const callouts = useSidebarCallouts();
   const hosts = useHosts();
   const label = hosts.find((host) => host.serverId === serverId)?.label ?? serverId;
+
   useEffect(() => {
     const state = entry.state;
-    const failed = state.status === "error" || state.status === "denied";
     const description =
       state.status === "error"
         ? t("huaweiPush.error", { code: state.code })
         : t(DESCRIPTION_KEYS[state.status]);
     const actions: SidebarCalloutAction[] = [];
-    if (state.status === "permission-required")
+    if (state.status === "permission-required") {
       actions.push({ label: t("huaweiPush.enable"), onPress: entry.retry });
-    if (state.status === "denied")
+    }
+    if (state.status === "denied") {
       actions.push({ label: t("huaweiPush.settings"), onPress: entry.retry });
-    if (state.status === "error")
+    }
+    if (state.status === "error") {
       actions.push({ label: t("common.actions.retry"), onPress: entry.retry });
+    }
     let variant: "default" | "success" | "error" = "default";
     if (state.status === "ready") variant = "success";
-    if (failed) variant = "error";
+    if (state.status === "denied" || state.status === "error") variant = "error";
+
     return callouts.show({
       id: `huawei-push:${serverId}`,
-      dismissalKey: state.status === "ready" ? `huawei-push-ready:${serverId}` : undefined,
+      // One reminder per host and state: dismissing it stops the nagging until the state changes.
+      dismissalKey:
+        state.status === "loading" ? undefined : `huawei-push:${state.status}:${serverId}`,
       title: t("huaweiPush.title", { host: label }),
       description: <SidebarCalloutDescriptionText>{description}</SidebarCalloutDescriptionText>,
       variant,
       actions,
-      dismissible: !failed,
+      dismissible: state.status !== "loading",
       priority: 90,
       testID: "huawei-push-callout",
     });
   }, [callouts, entry, label, serverId, t]);
+
   return null;
 }
 

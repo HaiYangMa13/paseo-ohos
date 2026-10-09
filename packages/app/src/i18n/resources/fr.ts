@@ -13,7 +13,6 @@ export const fr: TranslationResources = {
       "Les notifications sont désactivées. Activez Paseo dans les paramètres de notification du système.",
     error:
       "Impossible de préparer les notifications (code {{code}}). Vérifiez la connexion, l’activation de Push Kit et le profil de signature.",
-    unavailable: "Cet hôte n’a pas activé Huawei Push. Mettez-le à jour et configurez-le d’abord.",
     enable: "Activer les notifications",
     settings: "Ouvrir les paramètres",
   },

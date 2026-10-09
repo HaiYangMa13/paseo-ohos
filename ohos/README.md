@@ -38,6 +38,8 @@ npm run build:ohos-web
 - **主机端**：daemon 仅在配置 `PASEO_HUAWEI_PUSH_KEY_FILE`（AGC 服务账号 JSON）后才宣告 `huaweiPushNotifications` 能力。未配置的主机不会收到 token，手机端也不会提示授权。Huawei token 与 Expo token 分开存储（`push-tokens.json.huawei`），避免旧版本 daemon 把 Huawei token 当 Expo token 发送。
 - **隐私边界**：推送正文固定为通用文案，点击数据只含 `serverId/workspaceId/agentId`，不含会话内容、文件名、命令或路径。
 - **开通前提**：AGC 开通 Push Kit 通知消息权益 → 重新生成调试/发布签名 Profile（新增权益后旧 Profile 不可用）→ 在主机上配置服务账号私钥 → 先在 `PASEO_HUAWEI_PUSH_TEST_MESSAGE=true`（默认）下用测试消息验证 → 通过后在 AGC 配置正式自分类权益，并把 `PASEO_HUAWEI_PUSH_CATEGORY` 设为对应值、`PASEO_HUAWEI_PUSH_TEST_MESSAGE=false`。
+- **静默边界**：只有主机已宣告华为推送能力时才会出现侧栏提示；主机未配置、手机未开通权益或设备不支持时保持静默，不影响应用其他功能。每个主机、每种状态只提醒一次，用户关闭后不再重复。
+- **常见错误码**：`1000900012` Push 权益未开通（本机为静默状态）、`1000900010` 应用身份不符（bundle 与签名 Profile 不匹配）、`1000900013` 跳区域取 token 受限、`1000900014` 设备不支持取 token、`1000900011` 网络不可用、`1000900001/8/9` 系统或推送服务内部错误、`1600004` 通知被关闭。
 - **验收状态**：单测覆盖 token 上报/撤销、provider 隔离、点击路由与发送请求体；真机送达与后台提醒尚未验证。
 
 ## 后台连接边界

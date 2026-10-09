@@ -10,7 +10,6 @@ export const ar: TranslationResources = {
     denied: "الإشعارات معطلة. فعّل Paseo في إعدادات إشعارات النظام.",
     error:
       "تعذر إعداد الإشعارات (الرمز {{code}}). تحقق من اتصال المضيف وتفعيل Push Kit وملف التوقيع.",
-    unavailable: "لم يفعّل هذا المضيف Huawei Push. حدّث المضيف واضبطه أولًا.",
     enable: "تفعيل الإشعارات",
     settings: "فتح الإعدادات",
   },

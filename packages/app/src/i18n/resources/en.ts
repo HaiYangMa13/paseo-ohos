@@ -7,7 +7,6 @@ export const en = {
     denied: "Notifications are disabled. Enable Paseo in the system notification settings.",
     error:
       "Could not prepare notifications (code {{code}}). Check the host connection, Push Kit activation, and signing Profile.",
-    unavailable: "This host has not enabled Huawei Push. Update and configure the host first.",
     enable: "Enable notifications",
     settings: "Open settings",
   },
