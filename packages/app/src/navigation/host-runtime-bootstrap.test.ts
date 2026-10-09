@@ -7,6 +7,10 @@ import {
   shouldRunStartupGiveUpTimer,
   startHostRuntimeBootstrap,
   bindHostRuntimeAppState,
+  bindHarmonyHostRuntimeAppState,
+  HARMONY_APP_STATE_EVENT,
+  HARMONY_APP_STATE_GLOBAL,
+  type HarmonyAppStateEventTarget,
 } from "./host-runtime-bootstrap";
 import type { DaemonStartResult, StartDaemonIfEnabledInput } from "@/runtime/daemon-start-service";
 
@@ -426,4 +430,41 @@ describe("host runtime app lifecycle", () => {
       expect(subscribed).toBe(false);
     },
   );
+
+  it("forces connection verification for Harmony foreground events", () => {
+    const visibility: boolean[] = [];
+    let resumeCalls = 0;
+    let listener: ((event: { detail?: { state?: unknown } }) => void) | undefined;
+    const target: HarmonyAppStateEventTarget = {
+      [HARMONY_APP_STATE_GLOBAL]: "background",
+      addEventListener: (type, nextListener) => {
+        expect(type).toBe(HARMONY_APP_STATE_EVENT);
+        listener = nextListener;
+      },
+      removeEventListener: (type, nextListener) => {
+        expect(type).toBe(HARMONY_APP_STATE_EVENT);
+        expect(nextListener).toBe(listener);
+        listener = undefined;
+      },
+    };
+    const dispose = bindHarmonyHostRuntimeAppState(
+      {
+        setAppVisible: (visible) => visibility.push(visible),
+        resumeConnections: () => {
+          resumeCalls += 1;
+        },
+      },
+      target,
+    );
+
+    expect(visibility).toEqual([false]);
+    listener?.({ detail: { state: "active" } });
+    expect(visibility).toEqual([false, true]);
+    expect(resumeCalls).toBe(1);
+    listener?.({ detail: { state: "background" } });
+    expect(visibility).toEqual([false, true, false]);
+
+    dispose();
+    expect(listener).toBeUndefined();
+  });
 });

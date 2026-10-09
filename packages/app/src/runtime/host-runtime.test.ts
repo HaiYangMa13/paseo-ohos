@@ -1636,6 +1636,12 @@ describe("HostRuntimeStore", () => {
       expect(clientA.connectionVerifications).toBe(1);
       expect(clientB.connectionVerifications).toBe(1);
       expect(clientB.ensureConnectedCalls).toBe(1);
+      // React Native AppState and the Harmony native lifecycle bridge can
+      // report the same foreground transition. Coalesce them into one verify.
+      store.resumeConnections();
+      store.resumeConnections();
+      expect(clientA.ensureConnectedCalls).toBe(1);
+      expect(clientB.ensureConnectedCalls).toBe(1);
       expect(store.getSnapshot(hostA.serverId)?.connectionStatus).toBe("online");
       expect(store.getSnapshot(hostB.serverId)?.connectionStatus).toBe("online");
 

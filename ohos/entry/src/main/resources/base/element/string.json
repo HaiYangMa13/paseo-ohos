@@ -25,6 +25,10 @@
       "value": "Provide tactile feedback on approval requests"
     },
     {
+      "name": "reason_microphone",
+      "value": "Capture your voice for dictation and realtime voice conversations"
+    },
+    {
       "name": "reason_background",
       "value": "Keep WebSocket connection and Live View updated in background"
     }

@@ -21,6 +21,42 @@ function getAudioContextCtor(): typeof AudioContext | null {
   return browserWindow.AudioContext ?? browserWindow.webkitAudioContext ?? null;
 }
 
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  success: (stream: MediaStream) => void,
+  failure: (error: DOMException) => void,
+) => void;
+
+function getLegacyGetUserMedia(): LegacyGetUserMedia | null {
+  if (typeof navigator === "undefined") return null;
+  const legacyNavigator = navigator as Navigator & {
+    getUserMedia?: LegacyGetUserMedia;
+    webkitGetUserMedia?: LegacyGetUserMedia;
+    mozGetUserMedia?: LegacyGetUserMedia;
+    msGetUserMedia?: LegacyGetUserMedia;
+  };
+  return (
+    legacyNavigator.getUserMedia ??
+    legacyNavigator.webkitGetUserMedia ??
+    legacyNavigator.mozGetUserMedia ??
+    legacyNavigator.msGetUserMedia ??
+    null
+  );
+}
+
+async function requestMicrophoneStream(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  if (navigator.mediaDevices?.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  const legacyGetUserMedia = getLegacyGetUserMedia();
+  if (!legacyGetUserMedia) {
+    throw new Error("Microphone capture is not supported in this environment");
+  }
+  return await new Promise<MediaStream>((resolve, reject) => {
+    legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+  });
+}
+
 function floatToInt16(sample: number): number {
   const clamped = Math.max(-1, Math.min(1, sample));
   return clamped < 0 ? Math.round(clamped * 0x8000) : Math.round(clamped * 0x7fff);
@@ -281,8 +317,7 @@ export function createAudioEngine(
 
       const missingNavigator =
         typeof navigator === "undefined" ||
-        !navigator.mediaDevices ||
-        typeof navigator.mediaDevices.getUserMedia !== "function";
+        (!navigator.mediaDevices?.getUserMedia && !getLegacyGetUserMedia());
       const secureContext =
         typeof window !== "undefined" && typeof window.isSecureContext === "boolean"
           ? window.isSecureContext
@@ -290,11 +325,17 @@ export function createAudioEngine(
       const currentOrigin =
         typeof window !== "undefined" && window.location ? window.location.origin : "unknown";
       const isDesktopApp = isElectronRuntime();
+      const isHarmonyApp =
+        typeof globalThis !== "undefined" &&
+        (globalThis as { HarmonyBridge?: unknown }).HarmonyBridge != null;
 
       if (missingNavigator) {
         throw new Error("Microphone capture is not supported in this environment");
       }
-      if (!secureContext && !isDesktopApp) {
+      // ArkWeb loads the bundled client from a local rawfile origin. It is an
+      // app-controlled origin even though the browser does not classify it as
+      // HTTPS, so let the native Web permission callback arbitrate access.
+      if (!secureContext && !isDesktopApp && !isHarmonyApp) {
         throw new Error(
           `Microphone access requires HTTPS or localhost. Current origin: ${currentOrigin}`,
         );
@@ -302,7 +343,7 @@ export function createAudioEngine(
 
       try {
         const context = await ensureCaptureContext();
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await requestMicrophoneStream({
           audio: {
             channelCount: 1,
             noiseSuppression: true,

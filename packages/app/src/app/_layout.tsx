@@ -68,6 +68,8 @@ import {
   shouldRunStartupGiveUpTimer,
   startHostRuntimeBootstrap,
   bindHostRuntimeAppState,
+  bindHarmonyHostRuntimeAppState,
+  type HarmonyAppStateEventTarget,
   type StartupBlocker,
 } from "@/navigation/host-runtime-bootstrap";
 import { registerWorkspaceRouteNavigationRef } from "@/navigation/workspace-route-navigation";
@@ -86,6 +88,7 @@ import { useActiveWorktreeNewAction } from "@/hooks/use-active-worktree-new-acti
 import { useGlobalNewWorkspaceAction } from "@/hooks/use-global-new-workspace-action";
 import { useLatchedBoolean } from "@/hooks/use-latched-boolean";
 import { useFaviconStatus } from "@/hooks/use-favicon-status";
+import { useHarmonyLiveView } from "@/hooks/use-harmony-live-view";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { resolveExplorerSidebarPresentation } from "@/workspace-tabs/explorer-sidebar";
 import { KeyboardShiftProvider } from "@/keyboard/shift";
@@ -371,7 +374,15 @@ async function shouldStartBuiltInDaemon(): Promise<boolean> {
 function HostRuntimeBootstrapProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const store = getHostRuntimeStore();
-    return bindHostRuntimeAppState(store, AppState);
+    const unbindAppState = bindHostRuntimeAppState(store, AppState);
+    const unbindHarmonyState =
+      typeof window !== "undefined"
+        ? bindHarmonyHostRuntimeAppState(store, window as unknown as HarmonyAppStateEventTarget)
+        : () => undefined;
+    return () => {
+      unbindHarmonyState();
+      unbindAppState();
+    };
   }, []);
 
   useEffect(() => {
@@ -675,6 +686,7 @@ function ProvidersWrapper({ children }: { children: ReactNode }) {
         <OfferLinkListener upsertDaemonFromOfferUrl={upsertConnectionFromOfferUrl} />
         <HostSessionManager />
         <FaviconStatusSync />
+        <HarmonyLiveViewSync />
         {children}
       </VoiceProvider>
     </AppearanceProvider>
@@ -879,6 +891,11 @@ function AppWithSidebar({ children }: { children: ReactNode }) {
 
 function FaviconStatusSync() {
   useFaviconStatus();
+  return null;
+}
+
+function HarmonyLiveViewSync() {
+  useHarmonyLiveView();
   return null;
 }
 

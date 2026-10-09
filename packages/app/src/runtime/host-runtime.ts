@@ -203,6 +203,7 @@ const PROBE_INACTIVE_WHILE_ONLINE_MS = 120_000;
 const ADAPTIVE_SWITCH_THRESHOLD_MS = 40;
 const ADAPTIVE_SWITCH_CONSECUTIVE_PROBES = 3;
 const CONFIGURED_OVERRIDE_BOOTSTRAP_RETRY_MS = 1_000;
+const FOREGROUND_RESUME_DEBOUNCE_MS = 750;
 
 function toActiveConnection(connection: HostConnection): ActiveConnection {
   if (connection.type === "directSocket") {
@@ -1393,6 +1394,8 @@ export class HostRuntimeStore {
   private timelineReplicaByServer = new Map<string, TimelineReplica>();
   private configuredOverrideBootstrapInFlight: Promise<void> | null = null;
   private bootPromise: Promise<void> | null = null;
+  private appVisible: boolean | null = null;
+  private lastForegroundResumeAt: number = Number.NEGATIVE_INFINITY;
   private storage: HostRuntimeStorage;
   private replicaCache: ReplicaCache;
   private readonly revokePushNotifications: typeof revokePushNotifications;
@@ -2327,6 +2330,8 @@ export class HostRuntimeStore {
   }
 
   setAppVisible(visible: boolean): void {
+    const wasVisible = this.appVisible;
+    this.appVisible = visible;
     // Keep normal reconnect backoff running while hidden, for as long as the OS
     // lets us execute. Foregrounding bypasses that backoff without closing healthy sockets.
     if (!visible) {
@@ -2334,6 +2339,26 @@ export class HostRuntimeStore {
       return;
     }
 
+    if (wasVisible !== true) {
+      this.resumeConnections();
+    }
+  }
+
+  /**
+   * Verify every active transport after a native foreground signal. This is
+   * separate from visibility state because ArkWeb can miss the background
+   * transition while its renderer is being suspended. Calls from native and
+   * React Native lifecycle sources are coalesced to avoid reconnect storms.
+   */
+  resumeConnections(): void {
+    if (this.controllers.size === 0) {
+      return;
+    }
+    const now = Date.now();
+    if (now - this.lastForegroundResumeAt < FOREGROUND_RESUME_DEBOUNCE_MS) {
+      return;
+    }
+    this.lastForegroundResumeAt = now;
     this.ensureConnectedAll({ verify: true });
   }
 

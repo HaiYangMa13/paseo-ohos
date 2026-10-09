@@ -262,3 +262,55 @@ export function bindHostRuntimeAppState(
   store.setAppVisible(appState.currentState === "active");
   return () => subscription.remove();
 }
+
+export const HARMONY_APP_STATE_EVENT = "paseo:harmony-app-state";
+export const HARMONY_APP_STATE_GLOBAL = "__PASEO_HARMONY_APP_STATE__";
+
+type HarmonyAppState = "active" | "background";
+
+interface HarmonyAppStateEvent {
+  detail?: {
+    state?: unknown;
+  };
+}
+
+export interface HarmonyAppStateEventTarget {
+  addEventListener: (type: string, listener: (event: HarmonyAppStateEvent) => void) => void;
+  removeEventListener: (type: string, listener: (event: HarmonyAppStateEvent) => void) => void;
+  [HARMONY_APP_STATE_GLOBAL]?: unknown;
+}
+
+function normalizeHarmonyAppState(value: unknown): HarmonyAppState | null {
+  return value === "active" || value === "background" ? value : null;
+}
+
+/**
+ * ArkWeb does not reliably forward document visibility into React Native
+ * AppState before its renderer is suspended. The native shell therefore emits
+ * an explicit lifecycle event. An active event always requests a verified
+ * reconnect, even if the web runtime missed the matching background event.
+ */
+export function bindHarmonyHostRuntimeAppState(
+  store: {
+    setAppVisible: (visible: boolean) => void;
+    resumeConnections: () => void;
+  },
+  target: HarmonyAppStateEventTarget,
+): () => void {
+  const apply = (state: HarmonyAppState): void => {
+    if (state === "active") {
+      store.setAppVisible(true);
+      store.resumeConnections();
+    } else {
+      store.setAppVisible(false);
+    }
+  };
+  const listener = (event: HarmonyAppStateEvent): void => {
+    const state = normalizeHarmonyAppState(event.detail?.state);
+    if (state) apply(state);
+  };
+  target.addEventListener(HARMONY_APP_STATE_EVENT, listener);
+  const initialState = normalizeHarmonyAppState(target[HARMONY_APP_STATE_GLOBAL]);
+  if (initialState) apply(initialState);
+  return () => target.removeEventListener(HARMONY_APP_STATE_EVENT, listener);
+}

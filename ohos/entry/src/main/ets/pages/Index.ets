@@ -3,6 +3,8 @@ import common from '@ohos.app.ability.common';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { BusinessError } from '@ohos.base';
 import { UIContext } from '@ohos.arkui.UIContext';
+import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit';
+import { AppLifecycleService, HarmonyAppLifecycleState } from '../common/services/AppLifecycleService';
 import { LiveViewService } from '../common/services/LiveViewService';
 import { FoldDisplayService, HarmonyDisplayMetrics } from '../common/services/FoldDisplayService';
 import { AgentModel, AgentStatus } from '../common/models/Agent';
@@ -68,6 +70,26 @@ class NativeHarmonyBridge {
         }
       });
     }
+  }
+
+  public dispatchAppState(state: HarmonyAppLifecycleState): void {
+    if (!this.webviewController || !this.uiContext) return;
+    const stateJson = JSON.stringify(state);
+    const script = `window.__PASEO_HARMONY_APP_STATE__=${stateJson};` +
+      `window.dispatchEvent(new CustomEvent('paseo:harmony-app-state',{detail:{state:${stateJson}}}));`;
+    this.uiContext.runScopedTask(() => {
+      try {
+        this.webviewController?.runJavaScript(script)
+          .then(() => {
+            Logger.info('Dispatched Harmony app state: %{public}s', state);
+          })
+          .catch((error: Object) => {
+            Logger.warn('Harmony app state dispatch rejected: %{public}s', JSON.stringify(error));
+          });
+      } catch (error) {
+        Logger.warn('Harmony app state dispatch failed: %{public}s', JSON.stringify(error));
+      }
+    });
   }
 
   /**
@@ -145,6 +167,9 @@ struct Index {
     const context = getContext(this) as common.UIAbilityContext;
     this.bridge.setContext(context);
     this.bridge.setUIContext(this.getUIContext());
+    AppLifecycleService.getInstance().setListener((state: HarmonyAppLifecycleState) => {
+      this.bridge.dispatchAppState(state);
+    });
 
     FoldDisplayService.getInstance().addListener((metrics: HarmonyDisplayMetrics) => {
       const nextInset = metrics.keyboardHeightVp > 0 ? metrics.keyboardHeightVp : 0;
@@ -153,6 +178,10 @@ struct Index {
       }
       this.bridge.dispatchDisplayMetrics();
     });
+  }
+
+  aboutToDisappear() {
+    AppLifecycleService.getInstance().clearListener();
   }
 
   onBackPress(): boolean {
@@ -186,13 +215,41 @@ struct Index {
           methodList: ['updateAgentStatus', 'notifyPermission', 'scanPairingQr', 'getDisplayMetrics'],
           controller: this.webviewController
         })
+        .onPermissionRequest((event) => {
+          const request = event.request;
+          const audioResources = request.getAccessibleResource()
+            .filter((resource: string) => resource === 'TYPE_AUDIO_CAPTURE');
+          if (audioResources.length === 0) {
+            request.deny();
+            return;
+          }
+
+          const context = getContext(this) as common.UIAbilityContext;
+          const permissions: Array<Permissions> = ['ohos.permission.MICROPHONE'];
+          abilityAccessCtrl.createAtManager().requestPermissionsFromUser(context, permissions)
+            .then((result) => {
+              if (result.authResults.length > 0 &&
+                result.authResults[0] === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+                request.grant(audioResources);
+                Logger.info('ArkWeb microphone permission granted for %{public}s', request.getOrigin());
+              } else {
+                request.deny();
+                Logger.warn('ArkWeb microphone permission denied for %{public}s', request.getOrigin());
+              }
+            })
+            .catch((error: Object) => {
+              request.deny();
+              Logger.error('ArkWeb microphone permission request failed: %{public}s', JSON.stringify(error));
+            });
+        })
         .onProgressChange((event) => {
           if (event) {
             this.progress = event.newProgress;
             if (this.progress >= 100) {
               this.isLoading = false;
-              // Dispatch initial metrics when page finishes loading
+              // Replay native state after the page has installed its event listeners.
               this.bridge.dispatchDisplayMetrics();
+              this.bridge.dispatchAppState(AppLifecycleService.getInstance().getState());
             }
           }
         })

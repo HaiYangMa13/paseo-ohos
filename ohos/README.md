@@ -9,6 +9,7 @@
 ## 架构概览
 
 Paseo 遵循严格的客户端-服务端解耦设计：
+
 - **Paseo Daemon（运行在 PC / 服务器）**：负责进程调度、Git Worktree 管理、终端 PTY 字符流以及运行各大 Agent 的 CLI。
 - **Paseo HarmonyOS Client（运行在鸿蒙设备）**：纯 ArkTS + ArkUI 原生开发，通过 WebSocket RPC 协议与 Daemon 或 Relay 中继通信。
 
@@ -39,8 +40,9 @@ Paseo 遵循严格的客户端-服务端解耦设计：
 ## 核心特性与鸿蒙专属适配
 
 1. **鸿蒙实况窗 (Live View)**
-   - Agent 处于 `running` 状态执行任务时，状态栏胶囊与锁屏卡片实时显示执行进度；
-   - 任务完成切为 `idle` 或需要审批时，第一时间通过实况窗/横幅通知提醒。
+   - 通过 `@kit.LiveViewKit` 的 `PROGRESS` 场景接入原生实况窗；Agent 处于 `running` 状态时显示状态栏胶囊与锁屏卡片；
+   - 任务完成切为 `idle` 时结束实况窗，需要审批时发送横幅通知；
+   - `PROGRESS` 场景需要在 AppGallery Connect 为当前应用申请并开通 Live View Kit 权益；未开通时系统会返回 `1003500005`。
 2. **折叠屏与平板双栏响应式布局 (Split View)**
    - 自动检测屏幕宽度（`min-width: 600vp`）：
      - **普通手机模式**：底部 Tab 栏导航，点击 Agent 页面无缝转场详情页；
@@ -52,6 +54,9 @@ Paseo 遵循严格的客户端-服务端解耦设计：
    - 结构化解析统一 Diff 补丁格式（Unified Diff），支持按文件折叠、行号对照、绿红增删代码高亮。
 5. **实时工具审批 (Permission Flow)**
    - 遇到高危 Bash 指令或文件写入时，客户端即时弹出原生核准卡片，支持一键批准或驳回。
+6. **语音交互 (Voice)**
+   - ArkWeb 会把网页的音频采集请求转交原生权限回调，并动态申请 `ohos.permission.MICROPHONE`；
+   - 同时兼容 `navigator.mediaDevices.getUserMedia` 与 ArkWeb 旧版 `getUserMedia` 入口。
 
 ---
 
@@ -112,15 +117,18 @@ paseo-harmonyos/
 ## 快速上手与运行
 
 ### 1. 开发环境要求
+
 - **IDE**：Huawei DevEco Studio 5.0 Release 或更新版本
 - **SDK**：HarmonyOS NEXT Developer Beta / Release SDK (API Version 12 以上)
 
 ### 2. 打开与构建
+
 1. 打开 DevEco Studio，选择 **File -> Open...**，选择本目录 `ohos/`。
 2. 检查右上角 **Project Structure -> Project -> Signing Configs**，勾选 `Automatically generate signature`（或者配置你的开发者证书）。
 3. 选择目标设备（鸿蒙真机或模拟器），点击 **Run** 即可一键编译安装并运行。
 
 ### 3. 连接电脑上的 Paseo Daemon
+
 1. **电脑端准备**：
    - 确保本机或局域网服务器已安装并运行 Paseo（默认端口 `6767`）。
    - 查看电脑局域网 IP（例如 `192.168.1.100`）。

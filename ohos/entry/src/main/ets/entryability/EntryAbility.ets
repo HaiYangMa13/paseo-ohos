@@ -4,6 +4,7 @@ import Want from '@ohos.app.ability.Want';
 import window from '@ohos.window';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { sensor } from '@kit.SensorServiceKit';
+import { AppLifecycleService } from '../common/services/AppLifecycleService';
 import { FoldDisplayService } from '../common/services/FoldDisplayService';
 
 interface AmbientLightSample {
@@ -106,10 +107,12 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground(): void {
+    AppLifecycleService.getInstance().publish('active');
     hilog.info(0x0000, 'PaseoAbility', 'Ability onForeground');
   }
 
   onBackground(): void {
+    AppLifecycleService.getInstance().publish('background');
     hilog.info(0x0000, 'PaseoAbility', 'Ability onBackground');
   }
 }
