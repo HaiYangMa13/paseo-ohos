@@ -35,7 +35,7 @@ export class LiveViewService {
     this.clickAction = await wantAgent.getWantAgent({
       wants: [
         {
-          bundleName: 'sh.paseo.harmony',
+          bundleName: 'sh.paseo.client',
           abilityName: 'EntryAbility'
         }
       ],

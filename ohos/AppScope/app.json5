@@ -1,6 +1,6 @@
 {
   app: {
-    bundleName: "sh.paseo.harmony",
+    bundleName: "sh.paseo.client",
     vendor: "paseo",
     versionCode: 1000002,
     versionName: "0.11.1",

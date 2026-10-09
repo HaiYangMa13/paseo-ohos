@@ -21,7 +21,7 @@ npm run build:ohos-web
 
 用 DevEco Studio 打开本目录，配置本机签名并构建 `entry` HAP。不要提交本地证书、签名材料或 `entry/build/`。rawfile 是应用随包交付的客户端资源，保留在版本控制中；源码格式化与 lint 不检查生成的 bundle。
 
-应用包名保持 `sh.paseo.harmony`。`versionName` 对齐上游版本；`versionCode` 独立递增，不能因为上游版本命名低于早期下游的 `1.0.0` 而降低安装版本码。
+应用包名保持 `sh.paseo.client`，与 AppGallery Connect 中登记的应用一致（改包名必须同步重新生成签名 Profile，并在手机上作为新应用安装）。`versionName` 对齐上游版本；`versionCode` 独立递增，不能因为上游版本命名低于早期下游的 `1.0.0` 而降低安装版本码。
 
 ## 鸿蒙桥接
 
