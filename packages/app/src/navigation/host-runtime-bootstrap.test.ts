@@ -15,7 +15,7 @@ import {
 import type { DaemonStartResult, StartDaemonIfEnabledInput } from "@/runtime/daemon-start-service";
 
 describe("startHostRuntimeBootstrap", () => {
-  it("boots the host registry and starts the managed-daemon decision as one operation", async () => {
+  it("boots the host registry and starts the managed-daemon decision independently", async () => {
     const events: string[] = [];
     const shouldStartDaemon = async () => true;
     const store = {
@@ -44,9 +44,10 @@ describe("startHostRuntimeBootstrap", () => {
 
     expect(events).toEqual(["boot", "daemon-start-decision"]);
     expect(await receivedDecisions[0]).toBe(true);
+    expect(events).toEqual(["boot", "daemon-start-decision"]);
   });
 
-  it("waits for the host registry to load before evaluating managed-daemon startup", async () => {
+  it("loads the registry before evaluating managed-daemon startup", async () => {
     const events: string[] = [];
     let resolveBoot!: () => void;
     const booted = new Promise<void>((resolve) => {

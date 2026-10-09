@@ -64,6 +64,12 @@ export function useHarmonyLiveView(): void {
         bridge.updateAgentStatus("", "idle", "", "");
       }
     }
+  }, [agents, bridgeReady]);
+
+  useEffect(() => {
+    if (!bridgeReady) return;
+    const bridge = getHarmonyBridge();
+    if (!bridge) return;
 
     const permissionAgent = agents.find(
       (agent) => (agent.pendingPermissionCount ?? 0) > 0 || agent.requiresAttention,

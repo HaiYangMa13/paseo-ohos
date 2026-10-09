@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="robots" content="noindex,nofollow" />
-    <meta name="theme-color" content="#F7F7F8" />
+    <meta name="theme-color" content="#181B1A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Paseo" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,11 +15,6 @@
     <link rel="manifest" href="./manifest.json" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>Paseo</title>
-    <script>
-      if (window.location.protocol === 'resource:' && window.location.pathname !== '/') {
-        window.history.replaceState(null, '', '/');
-      }
-    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* Keep the app shell fixed to the viewport. */
@@ -31,7 +26,6 @@
         padding: 0;
         overflow: hidden;
         overscroll-behavior: none;
-        background-color: #F7F7F8;
       }
       /* These styles smooth text rendering in the app shell. */
       body {
@@ -76,6 +70,15 @@
         -webkit-app-region: no-drag !important;
       }
 
+      /* Electron does not clip app-region rectangles to scroll viewports.
+         Content-only viewports emit no window regions, including from their
+         controls. Visible controls here use normal DOM hit testing.
+         Use initial: Blink parses the explicit value none as no-drag. */
+      [data-window-content],
+      [data-window-content] * {
+        -webkit-app-region: initial !important;
+      }
+
       /* Suppress the browser's default focus outline — it appears on mouse
          clicks and looks out of place against our themed surfaces. Keep a
          themed ring for keyboard users via :focus-visible. */
@@ -91,6 +94,6 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-  <script src="./_expo/static/js/web/index-51c544785713db70c3dafa2c14e0c9d5.js" defer></script>
+  <script src="./_expo/static/js/web/index-4cbc6fd3891794dde01a7115562fc501.js" defer></script>
 </body>
 </html>

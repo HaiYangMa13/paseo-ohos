@@ -5,10 +5,13 @@ import { StyleSheet } from "react-native-unistyles";
 import { RetainedPanel } from "@/components/retained-panel";
 import { TitlebarDragRegion } from "@/components/desktop/titlebar-drag-region";
 import type { TabDropPreview } from "@/components/split-container-tab-drop-preview";
-import { ExplorerSidebarTabRail } from "@/screens/workspace/explorer-sidebar-tab-rail";
 import { WorkspacePanelHost } from "@/screens/workspace/workspace-panel-host";
 import { deriveWorkspacePaneState } from "@/screens/workspace/workspace-pane-state";
-import type { WorkspaceDesktopTabRowItem } from "@/screens/workspace/workspace-desktop-tabs-row";
+import {
+  WorkspaceDesktopTabsRow,
+  type WorkspaceDesktopTabRowItem,
+  type WorkspaceDesktopTabsRowProps,
+} from "@/screens/workspace/workspace-desktop-tabs-row";
 import type { WorkspacePaneContentModel } from "@/screens/workspace/workspace-pane-content";
 import type { WorkspaceTabDescriptor } from "@/screens/workspace/workspace-tabs-types";
 import type { SplitPane } from "@/stores/workspace-layout-store";
@@ -17,7 +20,22 @@ import { WindowChromeRegion, WindowChromeSafeArea } from "@/utils/desktop-window
 import { isHarmony } from "@/constants/platform";
 import { useHarmonyDisplayMetrics } from "@/hooks/use-harmony-display";
 
-interface ExplorerSidebarDockProps {
+interface ExplorerSidebarDockProps extends Pick<
+  WorkspaceDesktopTabsRowProps,
+  | "setHoveredCloseTabKey"
+  | "onCopyResumeCommand"
+  | "onCopyAgentId"
+  | "onCopyTerminalId"
+  | "onCopyFilePath"
+  | "onReloadAgent"
+  | "onRenameTab"
+  | "onCreateNewTab"
+  | "onExitFocusMode"
+> {
+  hoveredCloseTabKey: string | null;
+  onCloseTabsToLeft: (tabId: string, tabs: WorkspaceTabDescriptor[]) => Promise<void> | void;
+  onCloseTabsToRight: (tabId: string, tabs: WorkspaceTabDescriptor[]) => Promise<void> | void;
+  onCloseOtherTabs: (tabId: string, tabs: WorkspaceTabDescriptor[]) => Promise<void> | void;
   pane: SplitPane;
   uiTabs: WorkspaceTab[];
   normalizedServerId: string;
@@ -28,8 +46,6 @@ interface ExplorerSidebarDockProps {
   tabDropPreview: TabDropPreview | null;
   onSelectTab: (paneId: string, tabId: string) => void;
   onCloseTab: (tabId: string) => Promise<void> | void;
-  onCreateNewTab: () => void;
-  onMoveTabToMain: (tabId: string) => void;
   onReorderTabsInPane: (paneId: string, tabIds: string[]) => void;
   buildPaneContentModel: (input: {
     paneId: string;
@@ -51,7 +67,18 @@ export function ExplorerSidebarDock({
   onSelectTab,
   onCloseTab,
   onCreateNewTab,
-  onMoveTabToMain,
+  hoveredCloseTabKey,
+  setHoveredCloseTabKey,
+  onCopyResumeCommand,
+  onCopyAgentId,
+  onCopyTerminalId,
+  onCopyFilePath,
+  onReloadAgent,
+  onRenameTab,
+  onCloseTabsToLeft,
+  onCloseTabsToRight,
+  onCloseOtherTabs,
+  onExitFocusMode,
   onReorderTabsInPane,
   buildPaneContentModel,
   headerAction,
@@ -61,9 +88,7 @@ export function ExplorerSidebarDock({
   const isLandscapeHarmony = isHarmony && (width > height || harmonyMetrics.isLandscape);
   // In landscape or when unfolded on a foldable phone, use the native top safe area inset
   // (minimum 36 to clear camera/status bar, or exact value from ArkTS)
-  const topInset = isLandscapeHarmony
-    ? Math.max(harmonyMetrics.safeAreaInsets.top, 36)
-    : 0;
+  const topInset = isLandscapeHarmony ? Math.max(harmonyMetrics.safeAreaInsets.top, 36) : 0;
   const paneState = useMemo(() => deriveWorkspacePaneState({ pane, tabs: uiTabs }), [pane, uiTabs]);
   const tabs = useMemo(() => paneState.tabs.map((tab) => tab.descriptor), [paneState.tabs]);
   const activeTabId = paneState.activeTabId;
@@ -72,10 +97,10 @@ export function ExplorerSidebarDock({
       tabs.map((tab) => ({
         tab,
         isActive: tab.tabId === activeTabId,
-        isCloseHovered: false,
+        isCloseHovered: hoveredCloseTabKey === tab.key,
         isClosingTab: closingTabIds.has(tab.tabId),
       })),
-    [activeTabId, closingTabIds, tabs],
+    [activeTabId, closingTabIds, hoveredCloseTabKey, tabs],
   );
   const handleSelectTab = useCallback(
     (tabId: string) => onSelectTab(pane.id, tabId),
@@ -91,6 +116,19 @@ export function ExplorerSidebarDock({
     [onReorderTabsInPane, pane.id],
   );
 
+  const handleCloseTabsToLeft = useCallback(
+    (tabId: string) => onCloseTabsToLeft(tabId, tabs),
+    [onCloseTabsToLeft, tabs],
+  );
+  const handleCloseTabsToRight = useCallback(
+    (tabId: string) => onCloseTabsToRight(tabId, tabs),
+    [onCloseTabsToRight, tabs],
+  );
+  const handleCloseOtherTabs = useCallback(
+    (tabId: string) => onCloseOtherTabs(tabId, tabs),
+    [onCloseOtherTabs, tabs],
+  );
+
   return (
     <RetainedPanel active>
       <WindowChromeRegion corners="top-right">
@@ -100,22 +138,40 @@ export function ExplorerSidebarDock({
             style={[styles.tabRail, isLandscapeHarmony && { paddingTop: topInset }]}
           >
             <TitlebarDragRegion />
-            <ExplorerSidebarTabRail
-              paneId={pane.id}
-              tabs={tabItems}
-              normalizedServerId={normalizedServerId}
-              normalizedWorkspaceId={normalizedWorkspaceId}
-              activeDragTabId={activeDragTabId}
-              tabDropPreviewIndex={
-                tabDropPreview?.paneId === pane.id ? tabDropPreview.indicatorIndex : null
-              }
-              onNavigateTab={handleSelectTab}
-              onCloseTab={onCloseTab}
-              onCreateNewTab={onCreateNewTab}
-              onMoveTabToMain={onMoveTabToMain}
-              onReorderTabs={handleReorderTabs}
-              trailingAccessory={headerAction}
-            />
+            <View style={styles.tabRow}>
+              <WorkspaceDesktopTabsRow
+                host="explorer"
+                launchPurpose="supporting"
+                isFocused={isWorkspaceFocused}
+                ownsKeyboardShortcuts={false}
+                setHoveredCloseTabKey={setHoveredCloseTabKey}
+                onCopyResumeCommand={onCopyResumeCommand}
+                onCopyAgentId={onCopyAgentId}
+                onCopyTerminalId={onCopyTerminalId}
+                onCopyFilePath={onCopyFilePath}
+                onReloadAgent={onReloadAgent}
+                onRenameTab={onRenameTab}
+                onCloseTabsToLeft={handleCloseTabsToLeft}
+                onCloseTabsToRight={handleCloseTabsToRight}
+                onCloseOtherTabs={handleCloseOtherTabs}
+                focusModeEnabled={false}
+                onExitFocusMode={onExitFocusMode}
+                externalDndContext
+                paneId={pane.id}
+                tabs={tabItems}
+                normalizedServerId={normalizedServerId}
+                normalizedWorkspaceId={normalizedWorkspaceId}
+                activeDragTabId={activeDragTabId}
+                tabDropPreviewIndex={
+                  tabDropPreview?.paneId === pane.id ? tabDropPreview.indicatorIndex : null
+                }
+                onNavigateTab={handleSelectTab}
+                onCloseTab={onCloseTab}
+                onCreateNewTab={onCreateNewTab}
+                onReorderTabs={handleReorderTabs}
+              />
+            </View>
+            {headerAction ? <View style={styles.headerAction}>{headerAction}</View> : null}
             <View pointerEvents="none" style={styles.tabRailDivider} />
           </WindowChromeSafeArea>
           <View style={styles.content}>
@@ -145,8 +201,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   tabRail: {
     position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
     flexShrink: 0,
     backgroundColor: theme.colors.surfaceSidebar,
+  },
+  tabRow: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerAction: {
+    marginRight: theme.spacing[1],
   },
   tabRailDivider: {
     position: "absolute",

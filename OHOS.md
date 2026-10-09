@@ -15,10 +15,11 @@ This repository is an unofficial downstream of [Paseo](https://github.com/getpas
 
 ## Build the HarmonyOS client
 
-1. Open `ohos/` in DevEco Studio.
-2. Configure a HarmonyOS signing profile for your test device.
-3. Build the HAP with API 12 or newer.
-4. Install the signed HAP with `hdc` or run it from DevEco Studio.
+1. Install dependencies with `npm ci` from the repository root.
+2. Run `npm run build:ohos-web` to export the browser client and refresh the bundled rawfile resources.
+3. Open `ohos/` in DevEco Studio and configure a HarmonyOS signing profile for your test device.
+4. Build the HAP with API 12 or newer.
+5. Install the signed HAP with `hdc` or run it from DevEco Studio.
 
 The embedded Paseo web client is generated from `packages/app` and copied into `ohos/entry/src/main/resources/rawfile/` during the downstream build process. Do not commit local signing files or generated build directories.
 

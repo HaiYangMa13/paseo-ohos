@@ -6,9 +6,12 @@ pre-commit:
       exclude:
         - "package-lock.json"
         - "**/package-lock.json"
+        - "ohos/entry/src/main/resources/rawfile/**"
       run: npm run format:check:files -- {staged_files}
     - name: lint
       glob: "*.{js,jsx,ts,tsx}"
+      exclude:
+        - "ohos/entry/src/main/resources/rawfile/**"
       run: npm run lint -- {staged_files}
     - name: typecheck
       run: npm run typecheck
