@@ -19,6 +19,9 @@
         startWindowBackground: "$color:start_window_background",
         exported: true,
         launchType: "singleton",
+        backgroundModes: [
+          "dataTransfer",
+        ],
         skills: [
           {
             entities: ["entity.system.home"],

@@ -6,6 +6,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { sensor } from '@kit.SensorServiceKit';
 import { AppLifecycleService } from '../common/services/AppLifecycleService';
 import { PushService } from '../common/services/PushService';
+import { LiveViewService } from '../common/services/LiveViewService';
 import { FoldDisplayService } from '../common/services/FoldDisplayService';
 
 interface AmbientLightSample {
@@ -70,6 +71,7 @@ export default class EntryAbility extends UIAbility {
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(0x0000, 'PaseoAbility', 'Ability onCreate');
+    LiveViewService.getInstance().setContext(this.context);
     PushService.getInstance().captureWant(want);
     PushService.getInstance().initialize(this);
   }
@@ -80,6 +82,7 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     this.stopAmbientLightAdaptation();
+    LiveViewService.getInstance().release();
     PushService.getInstance().release();
     hilog.info(0x0000, 'PaseoAbility', 'Ability onDestroy');
   }

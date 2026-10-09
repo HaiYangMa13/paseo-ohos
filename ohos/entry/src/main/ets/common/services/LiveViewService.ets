@@ -2,6 +2,8 @@ import notificationManager from '@ohos.notificationManager';
 import { BusinessError } from '@ohos.base';
 import { wantAgent, WantAgent } from '@kit.AbilityKit';
 import { liveViewManager } from '@kit.LiveViewKit';
+import backgroundTaskManager from '@ohos.resourceschedule.backgroundTaskManager';
+import common from '@ohos.app.ability.common';
 import { AgentModel } from '../models/Agent';
 import { Logger } from '../utils/Logger';
 
@@ -9,9 +11,11 @@ export class LiveViewService {
   private static instance: LiveViewService | null = null;
   private readonly liveViewId: number = 1001;
   private isLiveViewActive: boolean = false;
+  private isContinuousTaskActive: boolean = false;
   private sequence: number = 0;
   private activeAgent: AgentModel | null = null;
   private clickAction: WantAgent | null = null;
+  private context: common.UIAbilityContext | null = null;
 
   private constructor() {}
 
@@ -20,6 +24,47 @@ export class LiveViewService {
       LiveViewService.instance = new LiveViewService();
     }
     return LiveViewService.instance;
+  }
+
+  public setContext(context: common.UIAbilityContext): void {
+    this.context = context;
+  }
+
+  public async release(): Promise<void> {
+    await this.stopContinuousTask();
+    this.context = null;
+    this.activeAgent = null;
+  }
+
+  private async startContinuousTask(): Promise<void> {
+    if (this.isContinuousTaskActive || !this.context) {
+      return;
+    }
+    try {
+      const clickAction = await this.getClickAction();
+      await backgroundTaskManager.startBackgroundRunning(
+        this.context,
+        backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
+        clickAction
+      );
+      this.isContinuousTaskActive = true;
+      Logger.info('Continuous background task started (DATA_TRANSFER)');
+    } catch (err) {
+      Logger.warn('Failed to start continuous background task: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  private async stopContinuousTask(): Promise<void> {
+    if (!this.isContinuousTaskActive || !this.context) {
+      return;
+    }
+    try {
+      await backgroundTaskManager.stopBackgroundRunning(this.context);
+      this.isContinuousTaskActive = false;
+      Logger.info('Continuous background task stopped');
+    } catch (err) {
+      Logger.warn('Failed to stop continuous background task: %{public}s', JSON.stringify(err));
+    }
   }
 
   /**
@@ -84,17 +129,19 @@ export class LiveViewService {
     };
   }
 
-  /** Update the native status-bar capsule and lock-screen Live View. */
+  /** Update the native status-bar capsule, lock-screen Live View, and continuous task. */
   public async updateLiveView(agent: AgentModel): Promise<void> {
     try {
       if (agent.status === 'running') {
+        this.activeAgent = agent;
+        await this.startContinuousTask();
+
         const enabled = await liveViewManager.isLiveViewEnabled();
         if (!enabled) {
           Logger.warn('HarmonyOS Live View is disabled for Paseo in system settings');
           return;
         }
 
-        this.activeAgent = agent;
         const liveView = await this.createLiveView(agent, 1);
         if (this.isLiveViewActive) {
           const result = await liveViewManager.updateLiveView(liveView);
@@ -117,15 +164,52 @@ export class LiveViewService {
             Logger.info('HarmonyOS Live View reconciled, result=%{public}d', result.resultCode);
           }
         }
-      } else if (this.isLiveViewActive && this.activeAgent &&
+      } else if (this.activeAgent &&
         (agent.status === 'idle' || agent.status === 'closed' || agent.status === 'error')) {
-        const result = await liveViewManager.stopLiveView(await this.createLiveView(this.activeAgent, -1));
-        this.isLiveViewActive = false;
+        const finishedAgent = this.activeAgent;
         this.activeAgent = null;
-        Logger.info('HarmonyOS Live View stopped, result=%{public}d', result.resultCode);
+
+        await this.stopContinuousTask();
+        await this.notifyTaskCompleted(finishedAgent);
+
+        if (this.isLiveViewActive) {
+          try {
+            const result = await liveViewManager.stopLiveView(await this.createLiveView(finishedAgent, 0));
+            this.isLiveViewActive = false;
+            Logger.info('HarmonyOS Live View stopped, result=%{public}d', result.resultCode);
+          } catch (e) {
+            Logger.warn('Live view stop error: %{public}s', JSON.stringify(e));
+          }
+        }
       }
     } catch (err) {
       Logger.warn('HarmonyOS Live View Kit call failed: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /** Post an immediate notification when a background agent completes its turn. */
+  public async notifyTaskCompleted(agent: AgentModel): Promise<void> {
+    try {
+      const title = agent.title.trim() || 'Agent';
+      const normalContent: notificationManager.NotificationBasicContent = {
+        title: 'Paseo: Task Completed',
+        text: `${title} has finished.`,
+        additionalText: 'Finished'
+      };
+
+      const request: notificationManager.NotificationRequest = {
+        id: 2001,
+        notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+        content: {
+          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
+          normal: normalContent
+        },
+        wantAgent: await this.getClickAction()
+      };
+      await notificationManager.publish(request);
+      Logger.info('Published task completion notification for %{public}s', title);
+    } catch (err) {
+      Logger.warn('Failed to publish task completion notification: %{public}s', JSON.stringify(err));
     }
   }
 
@@ -144,7 +228,8 @@ export class LiveViewService {
         content: {
           notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
           normal: normalContent
-        }
+        },
+        wantAgent: await this.getClickAction()
       };
       await notificationManager.publish(request);
     } catch (err) {

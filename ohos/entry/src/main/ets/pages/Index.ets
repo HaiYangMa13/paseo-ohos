@@ -25,6 +25,7 @@ class NativeHarmonyBridge {
 
   public setContext(context: common.UIAbilityContext): void {
     this.context = context;
+    this.liveViewService.setContext(context);
   }
 
   public setUIContext(uiContext: UIContext): void {
