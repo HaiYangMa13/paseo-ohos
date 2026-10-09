@@ -1,9 +1,10 @@
+import { revokeHarmonySubscription, startHarmonySubscription } from "./internal/harmony";
 import type { RevokePushNotificationsInput, StartPushNotificationsInput } from "./internal/types";
 
-export function startPushNotifications(_input: StartPushNotificationsInput): () => void {
-  return () => undefined;
+export function startPushNotifications(input: StartPushNotificationsInput): () => void {
+  return startHarmonySubscription(input);
 }
 
-export async function revokePushNotifications(_input: RevokePushNotificationsInput): Promise<void> {
-  // Push notifications are native-only.
+export async function revokePushNotifications(input: RevokePushNotificationsInput): Promise<void> {
+  await revokeHarmonySubscription(input);
 }

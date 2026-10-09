@@ -133,6 +133,8 @@ import {
   parseServerIdFromPathname,
 } from "@/utils/host-routes";
 import { buildNotificationRoute, resolveNotificationTarget } from "@/utils/notification-routing";
+import { bindHarmonyPushClicks } from "@/push-notifications/internal/harmony-bridge";
+import { HarmonyPushCalloutSource } from "@/push-notifications/harmony-callout-source";
 import { navigateToAgent } from "@/utils/navigate-to-agent";
 import { PluginCatalogSync } from "@/plugins";
 import {
@@ -162,6 +164,7 @@ const HostRuntimeBootstrapContext = createContext<HostRuntimeBootstrapState>({
 
 function PushNotificationRouter() {
   const router = useRouter();
+  const hostsLoaded = useHostRegistryLoaded();
   const lastHandledIdRef = useRef<string | null>(null);
   const openNotification = useStableEvent((data: Record<string, unknown> | undefined) => {
     const target = resolveNotificationTarget(data);
@@ -175,6 +178,17 @@ function PushNotificationRouter() {
 
     router.navigate(buildNotificationRoute(data));
   });
+
+  useEffect(() => {
+    if (!hostsLoaded) return;
+    return bindHarmonyPushClicks({
+      isKnownHost: (serverId) =>
+        getHostRuntimeStore()
+          .getHosts()
+          .some((host) => host.serverId === serverId),
+      open: openNotification,
+    });
+  }, [hostsLoaded, openNotification]);
 
   useEffect(() => {
     if (isWeb) {
@@ -609,6 +623,7 @@ function AppContainer({ children, chromeEnabled: chromeEnabledOverride }: AppCon
         <DownloadToast />
         <RosettaCalloutSource />
         <UpdateCalloutSource />
+        <HarmonyPushCalloutSource />
         <LegacyAgentSkillsMigration />
         <WorktreeSetupCalloutSource />
         <CommandCenterRootActions />

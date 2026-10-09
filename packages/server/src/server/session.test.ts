@@ -15,7 +15,7 @@ import {
 } from "../services/github-service.js";
 import { PARENT_AGENT_ID_LABEL } from "@getpaseo/protocol/agent-labels";
 import { CLIENT_CAPS } from "@getpaseo/protocol/client-capabilities";
-import type { WorkspaceDescriptorPayload } from "@getpaseo/protocol/messages";
+import type { PushProvider, WorkspaceDescriptorPayload } from "@getpaseo/protocol/messages";
 import {
   decodeFileTransferFrame,
   encodeFileTransferFrame,
@@ -1895,6 +1895,47 @@ test("push token registration can be revoked by the connected client", async () 
       payload: { requestId: "revoke-1" },
     },
   ]);
+});
+
+test("Huawei push registration and heartbeats retain provider identity until matching revocation", async () => {
+  const renewed: string[] = [];
+  const revoked: string[] = [];
+  const messages: unknown[] = [];
+  const session = createSessionForTest({
+    messages,
+    pushNotifications: asPushNotifications({
+      renew: (token: string, provider?: PushProvider) => renewed.push(`${provider}:${token}`),
+      revoke: (token: string, provider?: PushProvider) => revoked.push(`${provider}:${token}`),
+    }),
+  });
+  const heartbeat = {
+    type: "client_heartbeat",
+    deviceType: "mobile",
+    focusedAgentId: null,
+    lastActivityAt: "2026-10-08T12:00:00.000Z",
+    appVisible: false,
+  } as const;
+  await session.handleMessage({
+    type: "register_push_token",
+    token: "huawei-device",
+    provider: "huawei",
+  });
+  await session.handleMessage(heartbeat);
+  await session.handleMessage({
+    type: "push.unregister.request",
+    token: "huawei-device",
+    requestId: "wrong-provider",
+  });
+  await session.handleMessage(heartbeat);
+  await session.handleMessage({
+    type: "push.unregister.request",
+    token: "huawei-device",
+    provider: "huawei",
+    requestId: "correct-provider",
+  });
+  await session.handleMessage(heartbeat);
+  expect(renewed).toEqual(["huawei:huawei-device", "huawei:huawei-device", "huawei:huawei-device"]);
+  expect(revoked).toEqual(["undefined:huawei-device", "huawei:huawei-device"]);
 });
 
 test("push token revocation only acknowledges durable removal", async () => {

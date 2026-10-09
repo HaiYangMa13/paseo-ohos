@@ -9,6 +9,7 @@ import { LiveViewService } from '../common/services/LiveViewService';
 import { FoldDisplayService, HarmonyDisplayMetrics } from '../common/services/FoldDisplayService';
 import { AgentModel, AgentStatus } from '../common/models/Agent';
 import { Logger } from '../common/utils/Logger';
+import { PushService } from '../common/services/PushService';
 
 class NativeHarmonyBridge {
   private liveViewService: LiveViewService = LiveViewService.getInstance();
@@ -28,6 +29,43 @@ class NativeHarmonyBridge {
 
   public setUIContext(uiContext: UIContext): void {
     this.uiContext = uiContext;
+  }
+
+  private isTrustedPage(): boolean {
+    if (!this.webviewController) return false;
+    try {
+      return this.webviewController.getUrl().toLowerCase().startsWith('resource://rawfile/');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  public getPushState(): string {
+    if (!this.isTrustedPage()) return '{"status":"error","code":-1}';
+    return PushService.getInstance().getState();
+  }
+
+  public requestPushPermission(): void {
+    if (!this.isTrustedPage() || !this.context) return;
+    PushService.getInstance().requestPermission(this.context);
+  }
+
+  public consumePushClick(): string {
+    if (!this.isTrustedPage()) return '';
+    return PushService.getInstance().consumeClick();
+  }
+
+  public dispatchPushState(): void {
+    if (!this.isTrustedPage() || !this.uiContext) return;
+    this.uiContext.runScopedTask(() => {
+      try {
+        this.webviewController?.runJavaScript(
+          "window.dispatchEvent(new Event('paseo:harmony-push-state'));"
+        ).catch(() => Logger.warn('Push bridge event dispatch failed'));
+      } catch (error) {
+        Logger.warn('Push bridge is not attached');
+      }
+    });
   }
 
   public updateAgentStatus(title: string, status: string, provider: string, model: string): void {
@@ -167,6 +205,7 @@ struct Index {
     const context = getContext(this) as common.UIAbilityContext;
     this.bridge.setContext(context);
     this.bridge.setUIContext(this.getUIContext());
+    PushService.getInstance().setListener(() => this.bridge.dispatchPushState());
     AppLifecycleService.getInstance().setListener((state: HarmonyAppLifecycleState) => {
       this.bridge.dispatchAppState(state);
     });
@@ -181,6 +220,7 @@ struct Index {
   }
 
   aboutToDisappear() {
+    PushService.getInstance().setListener(null);
     AppLifecycleService.getInstance().clearListener();
   }
 
@@ -212,7 +252,8 @@ struct Index {
         .javaScriptProxy({
           object: this.bridge,
           name: 'HarmonyBridge',
-          methodList: ['updateAgentStatus', 'notifyPermission', 'scanPairingQr', 'getDisplayMetrics'],
+          methodList: ['updateAgentStatus', 'notifyPermission', 'scanPairingQr', 'getDisplayMetrics',
+            'getPushState', 'requestPushPermission', 'consumePushClick'],
           controller: this.webviewController
         })
         .onPermissionRequest((event) => {
@@ -250,6 +291,7 @@ struct Index {
               // Replay native state after the page has installed its event listeners.
               this.bridge.dispatchDisplayMetrics();
               this.bridge.dispatchAppState(AppLifecycleService.getInstance().getState());
+              this.bridge.dispatchPushState();
             }
           }
         })

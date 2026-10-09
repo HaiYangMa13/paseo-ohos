@@ -2,6 +2,19 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ru: TranslationResources = {
+  huaweiPush: {
+    title: "Уведомления HarmonyOS · {{host}}",
+    loading: "Подготовка системных уведомлений…",
+    ready: "Токен устройства отправлен хосту. Доставку еще нужно проверить на реальном устройстве.",
+    permissionRequired:
+      "Включите уведомления, чтобы получать обновления, когда Paseo работает в фоне.",
+    denied: "Уведомления отключены. Включите Paseo в системных настройках уведомлений.",
+    error:
+      "Не удалось подготовить уведомления (код {{code}}). Проверьте соединение, активацию Push Kit и профиль подписи.",
+    unavailable: "На этом хосте Huawei Push не включен. Сначала обновите и настройте хост.",
+    enable: "Включить уведомления",
+    settings: "Открыть настройки",
+  },
   paneFind: {
     connectionFailure:
       "Не удалось выполнить поиск в чате. Проверьте подключение к хосту и повторите попытку.",

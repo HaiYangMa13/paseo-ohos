@@ -2886,14 +2886,20 @@ export const ListCommandsRequestSchema = z.object({
   requestId: z.string(),
 });
 
+export const PushProviderSchema = z.enum(["expo", "huawei"]);
+export type PushProvider = z.infer<typeof PushProviderSchema>;
+
 export const RegisterPushTokenMessageSchema = z.object({
   type: z.literal("register_push_token"),
   token: z.string(),
+  // COMPAT(pushProviders): added in v0.11.1-ohos, remove omission after 2027-04-08 once client floor supports providers.
+  provider: PushProviderSchema.optional(),
 });
 
 export const PushUnregisterRequestSchema = z.object({
   type: z.literal("push.unregister.request"),
   token: z.string(),
+  provider: PushProviderSchema.optional(),
   requestId: z.string(),
 });
 
@@ -3594,6 +3600,7 @@ export const ServerInfoStatusPayloadSchema = z
         relayConfig: z.boolean().optional(),
         // COMPAT(pushTokenRevocation): added in v0.3.2, remove gate after 2027-02-10.
         pushTokenRevocation: z.boolean().optional(),
+        huaweiPushNotifications: z.boolean().optional(),
         // COMPAT(plugins): added in v0.3.0, remove gate after 2027-08-07.
         plugins: z.boolean().optional(),
         // COMPAT(pluginManagement): added in v0.4.0, remove gate after 2027-08-14.

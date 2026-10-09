@@ -2,6 +2,17 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const zhCN: TranslationResources = {
+  huaweiPush: {
+    title: "鸿蒙系统通知 · {{host}}",
+    loading: "正在准备系统通知…",
+    ready: "设备 token 已发送给主机；实际送达仍需真机验证。",
+    permissionRequired: "启用通知后，Paseo 在后台时也可收到任务提醒。",
+    denied: "通知已关闭，请在系统通知设置中启用 Paseo。",
+    error: "无法准备通知（错误码 {{code}}）。请检查主机连接、Push Kit 开通状态与签名 Profile。",
+    unavailable: "此主机尚未启用华为推送，请先升级并配置主机。",
+    enable: "启用通知",
+    settings: "打开设置",
+  },
   paneFind: {
     connectionFailure: "无法搜索此聊天。请检查主机连接后重试。",
     historyChangedFailure: "搜索期间聊天已更改。请重新搜索。",

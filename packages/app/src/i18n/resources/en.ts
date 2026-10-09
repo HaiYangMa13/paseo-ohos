@@ -1,4 +1,16 @@
 export const en = {
+  huaweiPush: {
+    title: "HarmonyOS notifications · {{host}}",
+    loading: "Preparing system notifications…",
+    ready: "Device token sent to this host. Delivery still needs a real-device test.",
+    permissionRequired: "Enable notifications to receive updates while Paseo is in the background.",
+    denied: "Notifications are disabled. Enable Paseo in the system notification settings.",
+    error:
+      "Could not prepare notifications (code {{code}}). Check the host connection, Push Kit activation, and signing Profile.",
+    unavailable: "This host has not enabled Huawei Push. Update and configure the host first.",
+    enable: "Enable notifications",
+    settings: "Open settings",
+  },
   paneFind: {
     connectionFailure: "Could not search this chat. Check the host connection and retry.",
     historyChangedFailure: "The chat changed while searching. Search again.",

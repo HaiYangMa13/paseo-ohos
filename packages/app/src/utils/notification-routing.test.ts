@@ -32,6 +32,17 @@ describe("resolveNotificationTarget", () => {
     });
   });
 
+  it("accepts Huawei push click payloads with platform string ids", () => {
+    const click = { serverId: "123", workspaceId: "workspace-1", agentId: "agent-1" };
+    expect(resolveNotificationTarget(click)).toEqual({
+      serverId: "123",
+      agentId: "agent-1",
+      workspaceId: "workspace-1",
+      terminalId: null,
+    });
+    expect(buildNotificationRoute(click)).toBe("/h/123/workspace/workspace-1?open=agent%3Aagent-1");
+  });
+
   it("does not treat cwd as a workspace id alias", () => {
     expect(
       resolveNotificationTarget({

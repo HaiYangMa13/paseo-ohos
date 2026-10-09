@@ -47,6 +47,62 @@ describe("push notifications", () => {
     expect(JSON.parse(readFileSync(filePath, "utf8"))).toEqual({ subscriptions: [] });
   });
 
+  test("Huawei tokens use separate storage and delivery, including renewal after restart", async () => {
+    const home = mkdtempSync(path.join(tmpdir(), "paseo-push-providers-"));
+    homes.push(home);
+    const filePath = path.join(home, "push-tokens.json");
+    const expoDeliveries: string[][] = [];
+    const huaweiDeliveries: string[][] = [];
+    const options = {
+      logger: createLogger(),
+      filePath,
+      deliver: async (tokens: string[]) => {
+        expoDeliveries.push(tokens);
+      },
+      huaweiDeliver: async (tokens: string[]) => {
+        huaweiDeliveries.push(tokens);
+      },
+    };
+    const first = createPushNotifications(options);
+    first.renew("expo-device");
+    first.renew("huawei-device", "huawei");
+    const restarted = createPushNotifications(options);
+    await restarted.send({ title: "Done", body: "Task completed" });
+    expect(expoDeliveries).toEqual([["expo-device"]]);
+    expect(huaweiDeliveries).toEqual([["huawei-device"]]);
+    expect(readFileSync(filePath, "utf8")).not.toContain("huawei-device");
+    restarted.revoke("huawei-device", "huawei");
+    await restarted.send({ title: "Done", body: "Task completed" });
+    expect(expoDeliveries).toEqual([["expo-device"], ["expo-device"]]);
+    expect(huaweiDeliveries).toEqual([["huawei-device"]]);
+  });
+
+  test("a token stored before Huawei push is configured is delivered after a restart", async () => {
+    const home = mkdtempSync(path.join(tmpdir(), "paseo-push-late-huawei-"));
+    homes.push(home);
+    const filePath = path.join(home, "push-tokens.json");
+    const huaweiDeliveries: string[][] = [];
+    const withoutHuawei = createPushNotifications({
+      logger: createLogger(),
+      filePath,
+      deliver: async () => undefined,
+    });
+    expect(withoutHuawei.huaweiAvailable).toBe(false);
+    withoutHuawei.renew("huawei-device", "huawei");
+    withoutHuawei.renew("expo-device");
+    await withoutHuawei.send({ title: "Done", body: "Task completed" });
+    const configured = createPushNotifications({
+      logger: createLogger(),
+      filePath,
+      deliver: async () => undefined,
+      huaweiDeliver: async (tokens) => {
+        huaweiDeliveries.push(tokens);
+      },
+    });
+    await configured.send({ title: "Done", body: "Task completed" });
+    expect(huaweiDeliveries).toEqual([["huawei-device"]]);
+  });
+
   test("online revocation stops notifications immediately", async () => {
     const home = mkdtempSync(path.join(tmpdir(), "paseo-push-notifications-"));
     homes.push(home);

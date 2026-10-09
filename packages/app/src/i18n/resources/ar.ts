@@ -2,6 +2,18 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ar: TranslationResources = {
+  huaweiPush: {
+    title: "إشعارات HarmonyOS · {{host}}",
+    loading: "جارٍ إعداد إشعارات النظام…",
+    ready: "أُرسل رمز الجهاز إلى المضيف. يجب اختبار التسليم على جهاز فعلي.",
+    permissionRequired: "فعّل الإشعارات لتلقي التحديثات عندما يعمل Paseo في الخلفية.",
+    denied: "الإشعارات معطلة. فعّل Paseo في إعدادات إشعارات النظام.",
+    error:
+      "تعذر إعداد الإشعارات (الرمز {{code}}). تحقق من اتصال المضيف وتفعيل Push Kit وملف التوقيع.",
+    unavailable: "لم يفعّل هذا المضيف Huawei Push. حدّث المضيف واضبطه أولًا.",
+    enable: "تفعيل الإشعارات",
+    settings: "فتح الإعدادات",
+  },
   paneFind: {
     connectionFailure: "تعذر البحث في هذه المحادثة. تحقق من الاتصال بالمضيف وأعد المحاولة.",
     historyChangedFailure: "تغيّرت المحادثة أثناء البحث. أعد البحث.",

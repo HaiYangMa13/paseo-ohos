@@ -30,12 +30,21 @@ npm run build:ohos-web
 - **前后台**：UIAbility 状态通过显式事件送入 host-runtime。回前台验证连接并合并重复恢复信号，不能仅依赖 Web 文档可见性事件。
 - **实况窗**：使用 Live View Kit 的 `PROGRESS` 场景。需要在 AppGallery Connect 为应用开通权益；未开通可能返回 `1003500005`。
 - **本地通知**：运行中的客户端发现审批请求后发送通知。它不是系统远程推送，客户端被挂起时不能承诺仍能收到审批。
+- **系统推送**：见下节。远程推送负责客户端挂起时的任务完成/审批提醒，不作为 WebSocket 保活手段。
+
+## 系统推送（华为 Push Kit）
+
+- **手机端**：`common/services/PushService.ets` 在 UIAbility `onCreate` 取 Push token，并在 API ≥ 23 的系统上注册 `tokenUpdate` 事件；授权入口不自动弹窗，只有用户点「启用通知」的侧栏提示才调用 `requestEnableNotification`。点击通知时用 `want.parameters` 里的 `serverId/workspaceId/agentId` 跳转到对应 Agent，审批仍在应用内完成。
+- **主机端**：daemon 仅在配置 `PASEO_HUAWEI_PUSH_KEY_FILE`（AGC 服务账号 JSON）后才宣告 `huaweiPushNotifications` 能力。未配置的主机不会收到 token，手机端也不会提示授权。Huawei token 与 Expo token 分开存储（`push-tokens.json.huawei`），避免旧版本 daemon 把 Huawei token 当 Expo token 发送。
+- **隐私边界**：推送正文固定为通用文案，点击数据只含 `serverId/workspaceId/agentId`，不含会话内容、文件名、命令或路径。
+- **开通前提**：AGC 开通 Push Kit 通知消息权益 → 重新生成调试/发布签名 Profile（新增权益后旧 Profile 不可用）→ 在主机上配置服务账号私钥 → 先在 `PASEO_HUAWEI_PUSH_TEST_MESSAGE=true`（默认）下用测试消息验证 → 通过后在 AGC 配置正式自分类权益，并把 `PASEO_HUAWEI_PUSH_CATEGORY` 设为对应值、`PASEO_HUAWEI_PUSH_TEST_MESSAGE=false`。
+- **验收状态**：单测覆盖 token 上报/撤销、provider 隔离、点击路由与发送请求体；真机送达与后台提醒尚未验证。
 
 ## 后台连接边界
 
 声明 `KEEP_BACKGROUND_RUNNING` 权限不会自动申请长时任务，也不保证 ArkWeb 后台持续执行。当前没有以空闲 WebSocket 为理由申请通用长时保活。真实后台上传/下载应按华为的业务类型、进度更新和暂停规则单独实现。
 
-安装成功、定向逻辑测试通过与真机后台恢复验证是不同验收阶段。发布前需在手机验证扫码确认及密码、键盘避让、折叠/横屏安全区、后台后恢复连接和消息追赶。
+安装成功、定向逻辑测试通过与真机后台恢复验证是不同验收阶段。发布前需在手机验证扫码确认及密码、键盘避让、折叠/横屏安全区、后台后恢复连接、消息追赶，以及后台状态下的推送提醒与点击跳转。
 
 ## 上游同步
 

@@ -2,6 +2,7 @@ import { searchTimeline } from "./agent/chat-search/index.js";
 import type { BrowserToolsBroker } from "./browser-tools/broker.js";
 import { BrowserAutomationHostCapabilitySchema } from "@getpaseo/protocol/browser-automation/capabilities";
 import type {
+  PushProvider,
   SessionEventSubscription,
   UsageReportEntry,
   ProviderUsage,
@@ -755,6 +756,7 @@ export class Session {
       appVersion: string | null;
       activity: ClientActivity | null;
       pushToken: string | null;
+      pushProvider: PushProvider;
     }
   >();
   private unsubscribeTerminalWorkspaceContributionEvents: (() => void) | null = null;
@@ -1232,6 +1234,7 @@ export class Session {
         appVersion,
         activity: this.clientSources.get(source)?.activity ?? null,
         pushToken: this.clientSources.get(source)?.pushToken ?? null,
+        pushProvider: this.clientSources.get(source)?.pushProvider ?? "expo",
       });
       this.refreshObservationProducers();
       // COMPAT(ownedSubscriptions): added in v0.8.0, remove capability-driven legacy host registration after 2027-03-09.
@@ -1490,6 +1493,7 @@ export class Session {
         appVersion: this.appVersion,
         activity: null,
         pushToken: null,
+        pushProvider: "expo",
       };
       this.clientSources.set(source, metadata);
     }
@@ -3068,11 +3072,14 @@ export class Session {
         await this.handleListCommandsRequest(msg);
         return;
       case "register_push_token":
-        this.handleRegisterPushToken(msg.token);
+        this.handleRegisterPushToken(msg.token, msg.provider ?? "expo");
         return;
       case "push.unregister.request":
-        this.pushNotifications.revoke(msg.token);
-        if (this.currentClientMetadata().pushToken?.trim() === msg.token.trim()) {
+        if (msg.provider === "huawei") this.pushNotifications.revoke(msg.token, "huawei");
+        else this.pushNotifications.revoke(msg.token);
+        const metadata = this.currentClientMetadata();
+        const sameProvider = metadata.pushProvider === (msg.provider ?? "expo");
+        if (sameProvider && metadata.pushToken?.trim() === msg.token.trim()) {
           this.currentClientMetadata().pushToken = null;
         }
         this.emit({
@@ -4897,7 +4904,9 @@ export class Session {
       void this.clearFocusedTerminalAttention(focusedTerminalId);
     }
     if (metadata.pushToken) {
-      this.pushNotifications.renew(metadata.pushToken);
+      if (metadata.pushProvider === "huawei")
+        this.pushNotifications.renew(metadata.pushToken, "huawei");
+      else this.pushNotifications.renew(metadata.pushToken);
     }
   }
 
@@ -4916,10 +4925,13 @@ export class Session {
   /**
    * Handle push token registration
    */
-  private handleRegisterPushToken(token: string): void {
-    this.currentClientMetadata().pushToken = token;
-    this.pushNotifications.renew(token);
-    this.sessionLogger.info("Registered push token");
+  private handleRegisterPushToken(token: string, provider: PushProvider): void {
+    if (provider === "huawei") this.pushNotifications.renew(token, "huawei");
+    else this.pushNotifications.renew(token);
+    const metadata = this.currentClientMetadata();
+    metadata.pushToken = token;
+    metadata.pushProvider = provider;
+    this.sessionLogger.info({ provider }, "Registered push token");
   }
 
   /**

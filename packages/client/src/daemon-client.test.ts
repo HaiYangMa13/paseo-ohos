@@ -1416,6 +1416,40 @@ test("waits for the daemon to acknowledge push token revocation", async () => {
   await revocation;
 });
 
+test("preserves Huawei provider identity on registration and acknowledged revocation", async () => {
+  const mock = createMockTransport();
+  const client = new DaemonClient({
+    url: "ws://test",
+    clientId: "clsk_huawei_push",
+    reconnect: { enabled: false },
+    transportFactory: () => mock.transport,
+  });
+  clients.push(client);
+  const connected = client.connect();
+  mock.triggerOpen({ features: { pushTokenRevocation: true, huaweiPushNotifications: true } });
+  await connected;
+  client.registerPushToken("huawei-device", "huawei");
+  expect(parseSentFrame(mock.sent.at(-1))).toMatchObject({
+    type: "register_push_token",
+    token: "huawei-device",
+    provider: "huawei",
+  });
+  const revoked = client.unregisterPushToken("huawei-device", "huawei");
+  const request = parseSentFrame(mock.sent.at(-1));
+  expect(request).toMatchObject({
+    type: "push.unregister.request",
+    token: "huawei-device",
+    provider: "huawei",
+  });
+  mock.triggerMessage(
+    wrapSessionMessage({
+      type: "push.unregister.response",
+      payload: { requestId: request.requestId },
+    }),
+  );
+  await revoked;
+});
+
 test("bounds the wait for push token revocation", async () => {
   useHeartbeatClock();
   const mock = createMockTransport();

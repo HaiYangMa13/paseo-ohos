@@ -2,6 +2,19 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ja: TranslationResources = {
+  huaweiPush: {
+    title: "HarmonyOS 通知 · {{host}}",
+    loading: "システム通知を準備中…",
+    ready: "デバイストークンをホストに送信しました。配信は実機での検証が必要です。",
+    permissionRequired: "通知を有効にすると、Paseo がバックグラウンドでも更新を受信できます。",
+    denied: "通知が無効です。システムの通知設定で Paseo を有効にしてください。",
+    error:
+      "通知を準備できませんでした（コード {{code}}）。ホスト接続、Push Kit の有効化、署名プロファイルを確認してください。",
+    unavailable:
+      "このホストでは Huawei Push が有効ではありません。先にホストを更新して設定してください。",
+    enable: "通知を有効にする",
+    settings: "設定を開く",
+  },
   paneFind: {
     connectionFailure:
       "このチャットを検索できませんでした。ホストへの接続を確認して再試行してください。",

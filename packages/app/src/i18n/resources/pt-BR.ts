@@ -2,6 +2,21 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ptBR: TranslationResources = {
+  huaweiPush: {
+    title: "Notificações do HarmonyOS · {{host}}",
+    loading: "Preparando notificações do sistema…",
+    ready:
+      "Token do dispositivo enviado ao host. A entrega ainda precisa ser testada em um dispositivo real.",
+    permissionRequired:
+      "Ative as notificações para receber atualizações com o Paseo em segundo plano.",
+    denied:
+      "As notificações estão desativadas. Ative o Paseo nas configurações de notificações do sistema.",
+    error:
+      "Não foi possível preparar as notificações (código {{code}}). Verifique a conexão, a ativação do Push Kit e o perfil de assinatura.",
+    unavailable: "Este host não ativou o Huawei Push. Atualize e configure o host primeiro.",
+    enable: "Ativar notificações",
+    settings: "Abrir configurações",
+  },
   paneFind: {
     connectionFailure:
       "Não foi possível pesquisar nesta conversa. Verifique a conexão com o host e tente novamente.",

@@ -5,6 +5,7 @@ import window from '@ohos.window';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { sensor } from '@kit.SensorServiceKit';
 import { AppLifecycleService } from '../common/services/AppLifecycleService';
+import { PushService } from '../common/services/PushService';
 import { FoldDisplayService } from '../common/services/FoldDisplayService';
 
 interface AmbientLightSample {
@@ -69,10 +70,17 @@ export default class EntryAbility extends UIAbility {
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     hilog.info(0x0000, 'PaseoAbility', 'Ability onCreate');
+    PushService.getInstance().captureWant(want);
+    PushService.getInstance().initialize(this);
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    PushService.getInstance().captureWant(want);
   }
 
   onDestroy(): void {
     this.stopAmbientLightAdaptation();
+    PushService.getInstance().release();
     hilog.info(0x0000, 'PaseoAbility', 'Ability onDestroy');
   }
 
@@ -108,6 +116,7 @@ export default class EntryAbility extends UIAbility {
 
   onForeground(): void {
     AppLifecycleService.getInstance().publish('active');
+    PushService.getInstance().refreshPermission();
     hilog.info(0x0000, 'PaseoAbility', 'Ability onForeground');
   }
 

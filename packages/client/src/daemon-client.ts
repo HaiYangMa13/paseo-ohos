@@ -30,6 +30,7 @@ import {
 } from "@getpaseo/protocol/messages";
 import { validateWSOutboundMessage } from "@getpaseo/protocol/validation/ws-outbound";
 import type {
+  PushProvider,
   AgentStreamEventPayload,
   AgentSnapshotPayload,
   ProjectPlacementPayload,
@@ -2106,18 +2107,24 @@ export class DaemonClient {
     });
   }
 
-  registerPushToken(token: string): void {
+  registerPushToken(token: string, provider?: PushProvider): void {
     this.sendSessionMessage({
       type: "register_push_token",
       token,
+      ...(provider ? { provider } : {}),
     });
   }
 
-  async unregisterPushToken(token: string): Promise<void> {
+  async unregisterPushToken(token: string, provider?: PushProvider): Promise<void> {
     const requestId = this.createRequestId();
     await this.sendCorrelatedSessionRequest({
       requestId,
-      message: { type: "push.unregister.request", token, requestId },
+      message: {
+        type: "push.unregister.request",
+        token,
+        requestId,
+        ...(provider ? { provider } : {}),
+      },
       responseType: "push.unregister.response",
       timeout: PUSH_TOKEN_REVOCATION_TIMEOUT_MS,
     });
